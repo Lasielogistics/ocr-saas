@@ -319,5 +319,73 @@ curl -X POST http://localhost:9000/api/v1/upload \
 - tms-ocr-worker: Running - Celery worker ✓
 - tms-redis: Running (port 6379) ✓
 
+---
+
+## OCR SaaS - Fixes & Surya OCR Working (2026-04-08)
+
+### Fixes Applied Today
+
+1. **OpenCV API change** (`worker/preprocessing.py:118`)
+   - `fastNlMeansDenoisingColored` in OpenCV 4.11+ uses positional args instead of keyword args
+   - Changed from `hForColorComponents=10` to positional `10`
+
+2. **Idempotent file moves** (`shared/storage.py:53-68`)
+   - `move_to_processed` and `move_to_review` now check if file already exists
+   - Handles retry scenarios where file may already be moved
+
+3. **Renamed supabase.py** to avoid conflict with `supabase` pip package
+   - `shared/supabase.py` → `shared/supabase_client.py`
+   - `worker/supabase.py` → `worker/supabase_client.py`
+
+### Surya OCR - Now Working
+
+Surya OCR was already in requirements.txt and Dockerfile. Rebuilt worker container:
+- Rebuilt `docker-ocr_worker` image with Surya OCR
+- Worker now uses Surya OCR instead of Tesseract fallback
+- End-to-end test passed with real logistics documents
+
+**Test Results:**
+| File | Type | Extracted Fields |
+|------|------|------------------|
+| `AIMZ484307 EIR OUT.pdf` | receipt | reference_number: 01039151 |
+| `AIMZ401646 EIR IN.pdf` | chassis_paperwork | - |
+| `BEAU5507464 POD.pdf` | load_confirmation | - |
+
+### API Working End-to-End
+
+```bash
+# Upload
+curl -X POST http://localhost:9010/api/v1/upload \
+  -H "X-API-Key: ocr_test_key_123" \
+  --form "file=@/data/ocr/pending/AIMZ484307\ EIR\ OUT.pdf"
+
+# Check status
+curl http://localhost:9010/api/v1/status/{job_id} \
+  -H "X-API-Key: ocr_test_key_123"
+```
+
+Response:
+```json
+{
+  "job_id": "dfde5112-1d7",
+  "status": "completed",
+  "document_type": "receipt",
+  "confidence_score": 0.85,
+  "extracted_fields": {"reference_number": "01039151"},
+  "ocr_text": "Flexivan Leasing\nLLC\n\nGate Receipt\n...",
+  "processed_at": "2026-04-08T04:58:55Z"
+}
+```
+
+### Git Commits
+
+- `62c9165` - Fix OCR processing: OpenCV API and file path handling
+
+### Next Steps (Tomorrow)
+
+1. **Create review web page** - UI to show documents needing review
+2. **Detailed document classification** - More granular types for organizing docs
+3. **Test with 5 real logistics documents** (EIRs, PODs, Bills)
+
 ### Plan File
 Full plan saved at: `/home/talha/.claude/plans/cuddly-exploring-cerf.md
