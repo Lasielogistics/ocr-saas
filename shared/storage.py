@@ -55,6 +55,13 @@ class FileStorage:
         source = Path(file_path)
         ext = source.suffix
         dest = self.processed_path / f"{job_id}{ext}"
+
+        # If source doesn't exist, file may have already been moved
+        if not source.exists():
+            if dest.exists():
+                return str(dest)
+            raise FileNotFoundError(f"Source file not found: {source}")
+
         shutil.move(str(source), str(dest))
         return str(dest)
 
@@ -63,6 +70,14 @@ class FileStorage:
         source = Path(file_path)
         ext = source.suffix
         dest = self.review_path / f"{error_type}_{job_id}{ext}"
+
+        # If source doesn't exist, file may have already been moved (e.g., from a retry)
+        if not source.exists():
+            # Check if it's already in review
+            if dest.exists():
+                return str(dest)
+            raise FileNotFoundError(f"Source file not found: {source}")
+
         shutil.move(str(source), str(dest))
         return str(dest)
 

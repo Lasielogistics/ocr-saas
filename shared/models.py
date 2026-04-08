@@ -89,6 +89,7 @@ class CustomerConfig(BaseModel):
     supabase_url: str
     supabase_key: str
     api_key_hash: str
+    webhook_url: Optional[str] = None
     email_imap: Optional[dict] = None
     created_at: Optional[datetime] = None
 

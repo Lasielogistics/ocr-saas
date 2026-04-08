@@ -115,4 +115,5 @@ class ImagePreprocessor:
         """Apply denoising for low-quality photos."""
         # FastNlMeansDenoisingColored is good for photos
         # Small h parameter (3-10) preserves text quality while reducing noise
-        return cv2.fastNlMeansDenoisingColored(img, None, h=3, hForColorComponents=10, templateWindowSize=7)
+        # OpenCV 4.11+ uses positional args: src, h, hColor, templateWindowSize, searchWindowSize
+        return cv2.fastNlMeansDenoisingColored(img, None, 3, 10, 7)

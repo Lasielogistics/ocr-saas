@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from shared.supabase import SupabaseClientFactory, init_customer_clients
+from shared.supabase_client import SupabaseClientFactory, init_customer_clients
 from shared.storage import get_storage
 from shared.models import DocumentStatus
 from api.auth import get_current_customer
@@ -109,7 +109,7 @@ async def upload_document(
 
     # Queue OCR task
     celery_app.send_task(
-        "worker.tasks.process_document",
+        "tasks.process_document",
         args=[job_id, customer_id, file_path],
         task_id=job_id,
     )

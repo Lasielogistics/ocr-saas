@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from api.celery_app import celery_app
-from shared.supabase import SupabaseClientFactory
+from shared.supabase_client import SupabaseClientFactory
 
 logger = logging.getLogger(__name__)
 

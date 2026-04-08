@@ -47,7 +47,7 @@ def process_document(self, job_id: str, customer_id: str, file_path: str) -> dic
     Returns:
         dict with processing results
     """
-    from shared.supabase import SupabaseClientFactory
+    from shared.supabase_client import SupabaseClientFactory
     from shared.storage import get_storage
 
     logger.info(f"Processing job {job_id} for customer {customer_id}")
@@ -142,7 +142,7 @@ def call_webhook(webhook_url: str, result: dict) -> None:
 
 def init_customer_clients():
     """Initialize customer clients from config file."""
-    from shared.supabase import SupabaseClientFactory
+    from shared.supabase_client import SupabaseClientFactory
     import json
     from pathlib import Path
 

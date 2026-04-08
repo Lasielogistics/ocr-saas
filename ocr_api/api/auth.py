@@ -4,7 +4,7 @@ import os
 from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 
-from shared.supabase import SupabaseClientFactory
+from shared.supabase_client import SupabaseClientFactory
 
 
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
