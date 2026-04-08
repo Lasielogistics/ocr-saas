@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Containers – Tabulator Dashboard</title>
+  <!-- Inter font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Tabulator CSS -->
+  <link href="https://unpkg.com/tabulator-tables@6.2.5/dist/css/tabulator.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --sidebar-width: 240px;
+      --sidebar-collapsed: 60px;
+      --primary-color: #0052cc;
+      --primary-hover: #003d99;
+      --bg-light: #f4f5f7;
+      --text-dark: #172b4d;
+      --text-muted: #6b778c;
+      --modal-overlay: rgba(23, 43, 77, 0.7);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #layout { height: 100%; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg-light); color: var(--text-dark); overflow: hidden; }
+
+    /* Layout */
+    .layout { display: flex; height: 100%; transition: margin-left .3s; }
+
+    /* Content */
+    body.sidebar-open .content {
+      margin-left: var(--sidebar-width); padding: 2rem;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      transition: margin-left .3s;
+    }
+    body.sidebar-collapsed .content {
+      margin-left: var(--sidebar-collapsed); padding: 2rem;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      transition: margin-left .3s;
+    }
+    .content {
+      margin-left: var(--sidebar-width);
+      padding: 2rem;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      transition: margin-left .3s;
+    }
+    .content h1 { font-size: 1.75rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .content .subtitle { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem; }
+
+    /* Actions */
+    .actions { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .6rem 1rem; border: none; border-radius: 6px;
+      font-size: .95rem; font-weight: 500; cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: background .2s, transform .1s;
+    }
+    .btn-primary { background: var(--primary-color); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-success { background: #28a745; color: #fff; }
+    .btn-success:hover { background: #218838; transform: translateY(-1px); }
+    .btn-danger { background: #dc3545; color: #fff; }
+    .btn-danger:hover { background: #c82333; transform: translateY(-1px); }
+    .btn-secondary { background: #6c757d; color: #fff; }
+    .btn-secondary:hover { background: #5a6268; transform: translateY(-1px); }
+
+    /* Tabulator Container */
+    .tabulator-wrapper {
+      flex: 1;
+      overflow: auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    #containers-table {
+      height: 100%;
+    }
+
+    /* Custom Tabulator styling */
+    .tabulator {
+      font-size: 13px;
+      border: none;
+    }
+    .tabulator-header {
+      background: #fff;
+      border-bottom: 2px solid #e1e5ea;
+    }
+    .tabulator-row.tabulator-selectable:hover {
+      background-color: #c0d4eb !important;
+    }
+    .tabulator-row:nth-child(even) {
+      background-color: #eaf2fb;
+    }
+    .tabulator-row.tabulator-selected {
+      background-color: #b3d4fc !important;
+    }
+
+    /* Status badges */
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    .status-ready { background: #d4edda; color: #155724; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-overdue { background: #f8d7da; color: #721c24; }
+    .status-default { background: #e2e3e5; color: #383d41; }
+
+    .status { margin-top: 1rem; color: #28a745; font-weight: 500; }
+    .error { margin-top: 1rem; color: #d93025; font-weight: 500; }
+
+    /* Modal Popup */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--modal-overlay);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-content {
+      background: #fff;
+      border-radius: 8px;
+      width: 95vw;
+      height: 85vh;
+      max-width: 98vw;
+      max-height: 98vh;
+      min-width: 400px;
+      min-height: 400px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      resize: both;
+    }
+    .modal-content.columns-1 { width: 40vw; }
+    .modal-content.columns-2 { width: 60vw; }
+    .modal-content.columns-3 { width: 75vw; }
+    .modal-content.columns-4 { width: 85vw; }
+    .modal-content.columns-5 { width: 92vw; }
+    .modal-content.columns-6 { width: 95vw; }
+
+    /* Resize handle */
+    .resize-handle {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 20px;
+      height: 20px;
+      cursor: nwse-resize;
+      background: linear-gradient(135deg, transparent 50%, var(--primary-color) 50%);
+      border-bottom-right-radius: 8px;
+      z-index: 10;
+    }
+    .resize-handle::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      width: 3px;
+      height: 3px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: -4px 0 0 #fff, -8px 0 0 #fff, 0 -4px 0 #fff, -4px -4px 0 #fff, 0 -8px 0 #fff;
+    }
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 2px solid #e1e5ea;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #0052cc, #003d99);
+      color: #fff;
+      border-radius: 8px 8px 0 0;
+      transition: padding 0.3s ease;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      transition: font-size 0.3s ease;
+    }
+    /* Reduce header padding and font size for more columns */
+    .modal-content.columns-4 .modal-header { padding: 1.25rem; }
+    .modal-content.columns-4 .modal-header h2 { font-size: 1.35rem; }
+    .modal-content.columns-5 .modal-header { padding: 1rem; }
+    .modal-content.columns-5 .modal-header h2 { font-size: 1.25rem; }
+    .modal-content.columns-6 .modal-header { padding: 0.875rem; }
+    .modal-content.columns-6 .modal-header h2 { font-size: 1.15rem; }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 2rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+    }
+    .modal-close:hover {
+      opacity: 0.8;
+    }
+    .modal-toolbar {
+      padding: 1rem 1.5rem;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e1e5ea;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .modal-toolbar .toolbar-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .modal-toolbar .toolbar-divider {
+      width: 1px;
+      height: 24px;
+      background: #dee2e6;
+      margin: 0 0.5rem;
+    }
+    .modal-body {
+      padding: 0;
+      transition: all 0.3s ease;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+    }
+    .modal-body-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+    }
+    .modal-body.sidebar-open .modal-body-content {
+      margin-right: 300px;
+    }
+    /* Reduce body padding for more columns */
+    .modal-content.columns-4 .modal-body-content { padding: 1.25rem; }
+    .modal-content.columns-5 .modal-body-content { padding: 1rem; }
+    .modal-content.columns-6 .modal-body-content { padding: 0.875rem; }
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 2px solid #e1e5ea;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      align-items: center;
+      background: #fafbfc;
+    }
+    .modal-footer .footer-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .btn-primary-action {
+      background: var(--primary-color);
+      color: #fff;
+      padding: 0.7rem 1.5rem;
+      font-weight: 600;
+      font-size: 1rem;
+      box-shadow: 0 2px 6px rgba(0, 82, 204, 0.3);
+    }
+    .btn-primary-action:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 82, 204, 0.4);
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(10, auto);
+      gap: 1rem;
+      transition: gap 0.3s ease;
+    }
+    /* Reduce gap for more columns */
+    .modal-content.columns-4 .info-grid { gap: 0.75rem; }
+    .modal-content.columns-5 .info-grid { gap: 0.6rem; }
+    .modal-content.columns-6 .info-grid { gap: 0.5rem; }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      cursor: grab;
+      padding: 0.5rem;
+      border-radius: 4px;
+      transition: background 0.2s, padding 0.3s;
+    }
+    .info-item:active {
+      cursor: grabbing;
+    }
+    /* Reduce padding for more columns */
+    .modal-content.columns-4 .info-item { padding: 0.4rem; }
+    .modal-content.columns-5 .info-item { padding: 0.35rem; }
+    .modal-content.columns-6 .info-item { padding: 0.3rem; }
+    .info-item:hover {
+      background: #f4f5f7;
+    }
+    .info-item.dragging {
+      opacity: 0.4;
+      background: #e1e5ea;
+      cursor: grabbing;
+    }
+    .info-grid.dragging-active {
+      background:
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent calc(100% / var(--grid-cols, 2) - 1px),
+          #0052cc22 calc(100% / var(--grid-cols, 2) - 1px),
+          #0052cc22 calc(100% / var(--grid-cols, 2))
+        );
+    }
+    .info-item.drag-over,
+    .section-header.drag-over {
+      background: #0052cc33 !important;
+      border: 2px dashed var(--primary-color);
+      transform: scale(1.02);
+    }
+    .info-label {
+      font-size: clamp(0.7rem, 0.85rem, 1rem);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      word-break: break-word;
+    }
+    .info-value {
+      font-size: clamp(0.85rem, 1rem, 1.1rem);
+      color: var(--text-dark);
+      font-weight: 500;
+      word-break: break-word;
+    }
+    .info-input {
+      font-size: clamp(0.85rem, 1rem, 1.1rem);
+      color: var(--text-dark);
+      padding: 0.5rem;
+      border: 1px solid #dfe1e6;
+      border-radius: 4px;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.2s, padding 0.3s;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    /* Responsive text sizing based on column count */
+    .modal-content.columns-4 .info-label { font-size: 0.75rem; }
+    .modal-content.columns-4 .info-value,
+    .modal-content.columns-4 .info-input { font-size: 0.9rem; padding: 0.4rem; }
+    .modal-content.columns-5 .info-label { font-size: 0.7rem; }
+    .modal-content.columns-5 .info-value,
+    .modal-content.columns-5 .info-input { font-size: 0.85rem; padding: 0.35rem; }
+    .modal-content.columns-6 .info-label { font-size: 0.65rem; }
+    .modal-content.columns-6 .info-value,
+    .modal-content.columns-6 .info-input { font-size: 0.8rem; padding: 0.3rem; }
+    .info-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+    .info-input:disabled {
+      background: #f4f5f7;
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+    .info-item.full-width {
+      grid-column: 1 / -1;
+    }
+    .info-item.full-width textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    .info-item.hidden {
+      display: none;
+    }
+
+    /* Section Headers */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: grab;
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      transition: background 0.2s, padding 0.3s;
+      grid-column: 1 / -1 !important;
+      background: linear-gradient(135deg, #0052cc15, #003d9915);
+      border-left: 4px solid var(--primary-color);
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--primary-color);
+    }
+    .section-header:active {
+      cursor: grabbing;
+    }
+    .section-header.dragging {
+      opacity: 0.4;
+      background: #e1e5ea;
+      cursor: grabbing;
+    }
+    .section-header input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--primary-color);
+      padding: 0.25rem;
+    }
+    .section-header input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 3px;
+    }
+    .section-header .delete-header-btn {
+      background: transparent;
+      border: none;
+      color: #dc3545;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 3px;
+      opacity: 0.6;
+      transition: opacity 0.2s, background 0.2s;
+    }
+    .section-header .delete-header-btn:hover {
+      opacity: 1;
+      background: rgba(220, 53, 69, 0.1);
+    }
+    .modal-content.columns-4 .section-header { font-size: 1rem; padding: 0.6rem 0.875rem; }
+    .modal-content.columns-5 .section-header { font-size: 0.95rem; padding: 0.5rem 0.75rem; }
+    .modal-content.columns-6 .section-header { font-size: 0.9rem; padding: 0.4rem 0.625rem; }
+
+    /* Fields Panel - Sidebar (Option A) */
+    .fields-sidebar {
+      position: fixed;
+      top: 0;
+      right: -300px;
+      width: 300px;
+      height: 100%;
+      background: #fff;
+      border-left: 1px solid #e1e5ea;
+      box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+      overflow-y: auto;
+      z-index: 1002;
+      transition: right 0.3s ease;
+    }
+    .fields-sidebar.active {
+      right: 0;
+    }
+    .modal-body.sidebar-open .fields-sidebar {
+      position: absolute;
+      right: 0;
+    }
+
+    /* Settings Panel - Collapsible (Option B) */
+    .settings-panel {
+      background: #f8f9fa;
+      border-bottom: 1px solid #e1e5ea;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    .settings-panel.expanded {
+      max-height: 500px;
+      padding: 1.5rem;
+    }
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .settings-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .settings-group-title {
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      margin-bottom: 0.25rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--primary-color);
+    }
+    .settings-controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .settings-toggle-btn {
+      position: absolute;
+      right: 4rem;
+      top: 1.5rem;
+      z-index: 10;
+      transition: all 0.2s;
+    }
+    .settings-toggle-btn.active {
+      background: var(--primary-color) !important;
+      color: #fff !important;
+    }
+    .fields-panel-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e1e5ea;
+      font-weight: 600;
+      background: #f4f5f7;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .fields-list {
+      padding: 0.5rem;
+    }
+    .field-checkbox {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .field-checkbox:hover {
+      background: #f4f5f7;
+    }
+    .field-checkbox input {
+      margin-right: 0.5rem;
+      cursor: pointer;
+    }
+    .field-checkbox label {
+      cursor: pointer;
+      user-select: none;
+      flex: 1;
+    }
+    .column-selector {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-right: auto;
+    }
+    .column-input {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #dfe1e6;
+      background: #fff;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      width: 60px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .column-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+  </style>
+</head>
+<body>
+  <div id="layout" class="layout">
+    <main class="content">
+      <h1>Containers – Tabulator Edition (Option B: Collapsible Settings)</h1>
+      <p class="subtitle">Powered by Tabulator.js - Advanced data table with built-in filtering, sorting, export, and more</p>
+
+      <div class="actions">
+        <button id="add-btn" class="btn btn-success">➕ Add Container</button>
+        <button id="delete-selected-btn" class="btn btn-danger">🗑️ Delete Selected</button>
+        <button id="export-csv-btn" class="btn btn-primary">📥 Export CSV</button>
+        <button id="export-xlsx-btn" class="btn btn-primary">📥 Export Excel</button>
+        <button id="export-pdf-btn" class="btn btn-primary">📥 Export PDF</button>
+        <button id="clear-filters-btn" class="btn btn-secondary">🔄 Clear Filters</button>
+        <button id="refresh-btn" class="btn btn-secondary">↻ Refresh</button>
+      </div>
+
+      <div class="tabulator-wrapper">
+        <div id="containers-table"></div>
+      </div>
+      <div id="message" class="status"></div>
+    </main>
+  </div>
+
+  <!-- Container Details Modal - Collapsible Settings -->
+  <div id="containerModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Container Details</h2>
+        <button class="btn btn-secondary settings-toggle-btn" onclick="toggleSettingsPanel()" id="settingsToggleBtn">
+          ⚙️ Settings
+        </button>
+        <button class="modal-close" onclick="closeModal()" aria-label="Close modal">&times;</button>
+      </div>
+
+      <!-- Collapsible Settings Panel -->
+      <div id="settingsPanel" class="settings-panel">
+        <div class="settings-grid">
+          <!-- Layout Settings -->
+          <div class="settings-group">
+            <div class="settings-group-title">📐 Layout Configuration</div>
+            <div class="settings-controls">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="columnInput">Columns:</label>
+                <input type="number" id="columnInput" class="column-input" min="1" max="6" value="2" onchange="setModalColumns(parseInt(this.value))">
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="rowInput">Rows:</label>
+                <input type="number" id="rowInput" class="column-input" min="1" max="20" value="10" onchange="setModalRows(parseInt(this.value))">
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" onclick="addSectionHeader()" style="width: fit-content;">
+                ➕ Add Section Header
+              </button>
+              <button class="btn btn-secondary" onclick="resetModalLayout()" style="width: fit-content;">
+                🔄 Reset Layout
+              </button>
+            </div>
+          </div>
+
+          <!-- Field Visibility -->
+          <div class="settings-group">
+            <div class="settings-group-title">👁️ Visible Fields</div>
+            <div id="fieldsList" class="fields-list" style="max-height: 250px; overflow-y: auto; border: 1px solid #e1e5ea; border-radius: 4px; padding: 0.5rem; background: #fff;">
+              <!-- Field checkboxes will be populated here -->
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="settings-group">
+            <div class="settings-group-title">⚡ Quick Actions</div>
+            <div class="settings-controls">
+              <button class="btn btn-secondary" onclick="selectAllFields()">✓ Select All</button>
+              <button class="btn btn-secondary" onclick="deselectAllFields()">✗ Deselect All</button>
+              <button class="btn btn-secondary" onclick="resetFieldSelection()">↺ Reset Selection</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body with Content Only (Full Width) -->
+      <div class="modal-body" style="padding: 1.5rem; flex: 1; overflow-y: auto;">
+        <div id="modalContent" class="info-grid"></div>
+      </div>
+
+      <!-- Footer with Action Buttons -->
+      <div class="modal-footer">
+        <div class="footer-info" style="color: var(--text-muted); font-size: 0.9rem;">
+          <span id="fieldCount"></span>
+        </div>
+        <div class="footer-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary-action" onclick="saveContainer()">💾 Save Changes</button>
+        </div>
+      </div>
+
+      <div class="resize-handle"></div>
+    </div>
+  </div>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Tabulator -->
+  <script type="text/javascript" src="https://unpkg.com/tabulator-tables@6.2.5/dist/js/tabulator.min.js"></script>
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    // Supabase init
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(
+      'https://bsaffwfvnnyaihmrmqwt.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzYWZmd2Z2bm55YWlobXJtcXd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDk1NzksImV4cCI6MjA3MzcyNTU3OX0.RyyuoUS8bcf-a18SWExPZurd8mbX4XLOITiSAARV7sI'
+    );
+
+    const msgEl = document.getElementById('message');
+
+    function showMsg(txt, cls) {
+      msgEl.textContent = txt;
+      msgEl.className = cls;
+      setTimeout(() => msgEl.textContent = '', 3000);
+    }
+
+    // Status badge formatter
+    function statusFormatter(cell, formatterParams) {
+      const value = cell.getValue();
+      if (!value) return '';
+
+      const status = value.toLowerCase();
+      let className = 'status-default';
+
+      if (status.includes('ready') || status.includes('available') || status.includes('delivered')) {
+        className = 'status-ready';
+      } else if (status.includes('pending') || status.includes('transit') || status.includes('scheduled')) {
+        className = 'status-pending';
+      } else if (status.includes('overdue') || status.includes('delayed') || status.includes('issue')) {
+        className = 'status-overdue';
+      }
+
+      return `<span class="status-badge ${className}">${value}</span>`;
+    }
+
+    // Date formatter
+    function dateFormatter(cell) {
+      const value = cell.getValue();
+      if (!value) return '';
+      const date = new Date(value);
+      if (isNaN(date)) return value;
+      return date.toLocaleDateString('en-US');
+    }
+
+    // Initialize Tabulator
+    const table = new Tabulator("#containers-table", {
+      height: "100%",
+      layout: "fitDataTable",
+      placeholder: "No containers found",
+      pagination: true,
+      paginationSize: 50,
+      paginationSizeSelector: [25, 50, 100, 500, true],
+      movableColumns: true,
+      resizableColumns: true,
+      selectable: true,
+      selectableRangeMode: "click",
+
+      columns: [
+        {
+          formatter: "rowSelection",
+          titleFormatter: "rowSelection",
+          hozAlign: "center",
+          headerSort: false,
+          width: 40,
+          frozen: true
+        },
+        { title: "Container #", field: "container_number", headerFilter: "input", frozen: true, width: 150 },
+        { title: "Status", field: "status", headerFilter: "input", formatter: statusFormatter, width: 120 },
+        { title: "Customer", field: "customer", headerFilter: "input", width: 150 },
+        { title: "LFD", field: "LFD", headerFilter: "input", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "Offload", field: "Offload", headerFilter: "input", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "In", field: "In", headerFilter: "input", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "Out", field: "Out", headerFilter: "input", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "Appointment", field: "Appointment", headerFilter: "input", width: 150 },
+        { title: "Cut Off", field: "Cut Off", headerFilter: "input", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "Prepull", field: "Prepull", headerFilter: "input", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "Vessel ETA", field: "Vessel ETA", headerFilter: "input", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "Seal #", field: "seal_number", headerFilter: "input", width: 120 },
+        { title: "Size", field: "size", headerFilter: "input", width: 80 },
+        { title: "Type", field: "type", headerFilter: "input", width: 80 },
+        { title: "SSL", field: "ssl", headerFilter: "input", width: 100 },
+        { title: "Chassis", field: "chassis", headerFilter: "input", width: 120 },
+        { title: "Trucker", field: "trucker", headerFilter: "input", width: 150 },
+        { title: "Driver", field: "driver", headerFilter: "input", width: 150 },
+        { title: "Notes", field: "notes", headerFilter: "input", width: 200 },
+        { title: "Inv Date", field: "Inv Date", headerFilter: "input", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "DO Received", field: "DO Received", headerFilter: "input", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "Created", field: "created_at", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "Updated", field: "updated_at", formatter: dateFormatter, sorter: "date", width: 120 },
+        { title: "ID", field: "id", visible: false }
+      ],
+
+      // Cell editing
+      cellEdited: async function(cell) {
+        const field = cell.getColumn().getField();
+        const value = cell.getValue();
+        const row = cell.getRow().getData();
+
+        // Don't allow editing of id, created_at, updated_at
+        if (field === 'id' || field === 'created_at') {
+          showMsg('⚠️ Cannot edit this field', 'error');
+          loadData();
+          return;
+        }
+
+        // Update in Supabase
+        const updates = { [field]: value, updated_at: new Date().toISOString() };
+        const { error } = await supabaseClient
+          .from('containers')
+          .update(updates)
+          .eq('id', row.id);
+
+        if (error) {
+          showMsg(`❌ Error: ${error.message}`, 'error');
+          loadData(); // Reload to revert
+        } else {
+          showMsg(`✅ Updated ${field}`, 'status');
+        }
+      }
+    });
+
+    // Load data from Supabase
+    async function loadData() {
+      console.log('Loading containers data...');
+      const { data, error } = await supabaseClient
+        .from('containers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        showMsg(`❌ Error: ${error.message}`, 'error');
+        return;
+      }
+
+      console.log('Loaded containers:', data.length);
+      table.setData(data);
+    }
+
+    // Button handlers
+    document.getElementById('refresh-btn').onclick = () => {
+      loadData();
+      showMsg('✅ Data refreshed', 'status');
+    };
+
+    document.getElementById('clear-filters-btn').onclick = () => {
+      table.clearHeaderFilter();
+      showMsg('✅ Filters cleared', 'status');
+    };
+
+    document.getElementById('export-csv-btn').onclick = () => {
+      table.download("csv", "containers.csv");
+      showMsg('✅ Exported to CSV', 'status');
+    };
+
+    document.getElementById('export-xlsx-btn').onclick = () => {
+      table.download("xlsx", "containers.xlsx", { sheetName: "Containers" });
+      showMsg('✅ Exported to Excel', 'status');
+    };
+
+    document.getElementById('export-pdf-btn').onclick = () => {
+      table.download("pdf", "containers.pdf", {
+        orientation: "landscape",
+        title: "Containers Report"
+      });
+      showMsg('✅ Exported to PDF', 'status');
+    };
+
+    document.getElementById('delete-selected-btn').onclick = async () => {
+      const selectedData = table.getSelectedData();
+
+      if (selectedData.length === 0) {
+        alert('Please select at least one container to delete');
+        return;
+      }
+
+      const containerNames = selectedData.map(r => r.container_number || `ID ${r.id}`).join(', ');
+
+      if (!confirm(`Are you sure you want to delete ${selectedData.length} container(s)?\n\n${containerNames}\n\nThis action cannot be undone.`)) {
+        return;
+      }
+
+      const ids = selectedData.map(r => r.id);
+      const { error } = await supabaseClient
+        .from('containers')
+        .delete()
+        .in('id', ids);
+
+      if (error) {
+        showMsg(`❌ Error: ${error.message}`, 'error');
+      } else {
+        showMsg(`✅ Deleted ${ids.length} container(s)`, 'status');
+        loadData();
+      }
+    };
+
+    document.getElementById('add-btn').onclick = async () => {
+      const containerNumber = prompt('Enter container number:');
+      if (!containerNumber) return;
+
+      const newContainer = {
+        container_number: containerNumber,
+        status: 'Pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabaseClient
+        .from('containers')
+        .insert([newContainer]);
+
+      if (error) {
+        showMsg(`❌ Error: ${error.message}`, 'error');
+      } else {
+        showMsg('✅ Container added', 'status');
+        loadData();
+      }
+    };
+
+    // Store current container data
+    let currentContainerData = null;
+
+    // Default modal layout settings
+    const defaultModalLayout = {
+      columns: 2,
+      rows: 10,
+      visibleFields: [
+        // Basic container info
+        'container_number', 'size', 'type', 'seal_number', 'status',
+        // Customer
+        'customer',
+        // Dates
+        'LFD', 'Offload', 'In', 'Out', 'Cut Off', 'Prepull', 'Vessel ETA', 'Inv Date', 'DO Received',
+        // Logistics
+        'ssl', 'chassis', 'Appointment', 'trucker', 'driver',
+        // Notes
+        'notes',
+        // System fields
+        'created_at', 'updated_at'
+      ],
+      fieldOrder: null,
+      fieldPositions: null, // Will store {fieldName: {row: 1, col: 1}}
+      headers: [], // Will store [{id: 'header_1', text: 'Section Name', row: 1}]
+      modalSize: null // Will store {width: '60vw', height: '85vh'}
+    };
+
+    // Load modal layout from localStorage
+    function loadModalLayout() {
+      const saved = localStorage.getItem('modalLayout');
+      return saved ? JSON.parse(saved) : {...defaultModalLayout};
+    }
+
+    // Save modal layout to localStorage
+    function saveModalLayout(layout) {
+      localStorage.setItem('modalLayout', JSON.stringify(layout));
+    }
+
+    // Get current field order from DOM
+    function getCurrentFieldOrder() {
+      const items = document.querySelectorAll('.info-item');
+      return Array.from(items).map(item => item.getAttribute('data-field'));
+    }
+
+    // Toggle fields sidebar
+    function toggleFieldsSidebar() {
+      const sidebar = document.getElementById('fieldsSidebar');
+      const modalBody = document.getElementById('modalBody');
+      const toggleBtn = document.getElementById('fieldsPanelToggle');
+
+      sidebar.classList.toggle('active');
+      modalBody.classList.toggle('sidebar-open');
+
+      // Update button state
+      if (sidebar.classList.contains('active')) {
+        toggleBtn.style.background = 'var(--primary-color)';
+        toggleBtn.style.color = '#fff';
+      } else {
+        toggleBtn.style.background = '';
+        toggleBtn.style.color = '';
+      }
+    }
+
+    // Update field count display
+    function updateFieldCount() {
+      const layout = loadModalLayout();
+      const total = Object.keys(layout.visibleFields || {}).length || 23;
+      const visible = (layout.visibleFields || []).length;
+      const countEl = document.getElementById('fieldCount');
+      if (countEl) {
+        countEl.textContent = `Showing ${visible} of ${total} fields`;
+      }
+    }
+
+    // Set modal columns
+    function setModalColumns(count) {
+      // Validate count
+      if (count < 1) count = 1;
+      if (count > 6) count = 6;
+
+      const modalContent = document.getElementById('modalContent');
+      const modalWrapper = document.querySelector('.modal-content');
+
+      modalContent.style.gridTemplateColumns = `repeat(${count}, 1fr)`;
+
+      // Update modal-content class for responsive sizing
+      if (modalWrapper) {
+        // Remove all column classes
+        for (let i = 1; i <= 6; i++) {
+          modalWrapper.classList.remove(`columns-${i}`);
+        }
+        // Add current column class
+        modalWrapper.classList.add(`columns-${count}`);
+      }
+
+      // Update input value
+      const columnInput = document.getElementById('columnInput');
+      if (columnInput) {
+        columnInput.value = count;
+      }
+
+      // Save to layout
+      const layout = loadModalLayout();
+      layout.columns = count;
+      saveModalLayout(layout);
+    }
+
+    // Set modal rows
+    function setModalRows(count) {
+      // Validate count
+      if (count < 1) count = 1;
+      if (count > 20) count = 20;
+
+      const modalContent = document.getElementById('modalContent');
+      modalContent.style.gridTemplateRows = `repeat(${count}, auto)`;
+
+      // Update input value
+      const rowInput = document.getElementById('rowInput');
+      if (rowInput) {
+        rowInput.value = count;
+      }
+
+      // Save to layout
+      const layout = loadModalLayout();
+      layout.rows = count;
+      saveModalLayout(layout);
+    }
+
+    // Reset modal layout
+    function resetModalLayout() {
+      if (confirm('Reset to default layout? This will restore all fields and default column arrangement.')) {
+        localStorage.removeItem('modalLayout');
+        showMsg('✅ Layout reset to default', 'status');
+        if (currentContainerData) {
+          closeModal();
+          setTimeout(() => openModal(currentContainerData), 100);
+        }
+      }
+    }
+
+    // Add section header
+    function addSectionHeader() {
+      const layout = loadModalLayout();
+      if (!layout.headers) {
+        layout.headers = [];
+      }
+
+      // Find next available row
+      let maxRow = 1;
+      if (layout.fieldPositions) {
+        Object.values(layout.fieldPositions).forEach(pos => {
+          if (pos.row > maxRow) maxRow = pos.row;
+        });
+      }
+      layout.headers.forEach(header => {
+        if (header.row > maxRow) maxRow = header.row;
+      });
+
+      // Create new header
+      const headerId = 'header_' + Date.now();
+      const newHeader = {
+        id: headerId,
+        text: 'Section Header',
+        row: maxRow + 1
+      };
+
+      layout.headers.push(newHeader);
+      saveModalLayout(layout);
+
+      // Add header to DOM
+      const grid = document.getElementById('modalContent');
+      const headerHtml = `
+        <div class="section-header" draggable="true" data-header-id="${headerId}" style="grid-row: ${newHeader.row};">
+          <input type="text" value="${newHeader.text}" onchange="updateHeaderText('${headerId}', this.value)" placeholder="Section Header">
+          <button class="delete-header-btn" onclick="deleteHeader('${headerId}')" title="Delete Header">&times;</button>
+        </div>
+      `;
+
+      grid.insertAdjacentHTML('beforeend', headerHtml);
+      initModalDragDrop();
+      showMsg('✅ Header added', 'status');
+    }
+
+    // Update header text
+    function updateHeaderText(headerId, text) {
+      const layout = loadModalLayout();
+      if (!layout.headers) return;
+
+      const header = layout.headers.find(h => h.id === headerId);
+      if (header) {
+        header.text = text;
+        saveModalLayout(layout);
+      }
+    }
+
+    // Delete header
+    function deleteHeader(headerId) {
+      if (!confirm('Delete this header?')) return;
+
+      const layout = loadModalLayout();
+      if (!layout.headers) return;
+
+      layout.headers = layout.headers.filter(h => h.id !== headerId);
+      saveModalLayout(layout);
+
+      // Remove from DOM
+      const headerEl = document.querySelector(`[data-header-id="${headerId}"]`);
+      if (headerEl) {
+        headerEl.remove();
+      }
+
+      showMsg('✅ Header deleted', 'status');
+    }
+
+    // Toggle field visibility
+    function toggleField(fieldKey, checkbox) {
+      const layout = loadModalLayout();
+
+      if (checkbox.checked) {
+        if (!layout.visibleFields.includes(fieldKey)) {
+          layout.visibleFields.push(fieldKey);
+        }
+
+        // If field doesn't have a position, assign one
+        if (!layout.fieldPositions) {
+          layout.fieldPositions = {};
+        }
+        if (!layout.fieldPositions[fieldKey]) {
+          // Find first empty grid cell or put at end
+          let maxRow = 1;
+          Object.values(layout.fieldPositions).forEach(pos => {
+            if (pos.row > maxRow) maxRow = pos.row;
+          });
+          layout.fieldPositions[fieldKey] = { row: maxRow + 1, col: 1 };
+        }
+      } else {
+        layout.visibleFields = layout.visibleFields.filter(f => f !== fieldKey);
+      }
+
+      saveModalLayout(layout);
+
+      // Update visibility in modal
+      const item = document.querySelector(`.info-item[data-field="${fieldKey}"]`);
+      if (item) {
+        if (checkbox.checked) {
+          item.classList.remove('hidden');
+          // Update grid position if needed
+          const pos = layout.fieldPositions[fieldKey];
+          if (pos) {
+            item.style.gridRow = pos.row;
+            item.style.gridColumn = pos.col;
+          }
+        } else {
+          item.classList.add('hidden');
+        }
+      }
+    }
+
+    // Populate fields panel
+    function populateFieldsPanel(fieldLabels, visibleFields) {
+      const fieldsList = document.getElementById('fieldsList');
+      let html = '';
+
+      for (const [key, label] of Object.entries(fieldLabels)) {
+        const isVisible = visibleFields.includes(key);
+        html += `
+          <div class="field-checkbox">
+            <input type="checkbox" id="field-${key}" ${isVisible ? 'checked' : ''}
+                   onchange="toggleField('${key}', this)">
+            <label for="field-${key}">${label}</label>
+          </div>
+        `;
+      }
+
+      fieldsList.innerHTML = html;
+    }
+
+    // Modal functions
+    function openModal(data) {
+      const modal = document.getElementById('containerModal');
+      const modalContent = document.getElementById('modalContent');
+      currentContainerData = data;
+
+      // Load saved layout
+      const layout = loadModalLayout();
+
+      // Field labels mapping (organized logically)
+      const fieldLabels = {
+        // Basic container info
+        container_number: 'Container Number',
+        size: 'Size',
+        type: 'Type',
+        seal_number: 'Seal Number',
+        status: 'Status',
+        // Customer
+        customer: 'Customer',
+        // Dates
+        LFD: 'Last Free Day',
+        Offload: 'Offload Date',
+        In: 'In Date',
+        Out: 'Out Date',
+        'Cut Off': 'Cut Off',
+        Prepull: 'Prepull',
+        'Vessel ETA': 'Vessel ETA',
+        'Inv Date': 'Invoice Date',
+        'DO Received': 'DO Received',
+        // Logistics
+        ssl: 'SSL',
+        chassis: 'Chassis',
+        Appointment: 'Appointment',
+        trucker: 'Trucker',
+        driver: 'Driver',
+        // Notes
+        notes: 'Notes',
+        // System fields
+        created_at: 'Created At',
+        updated_at: 'Updated At'
+      };
+
+      // Non-editable fields
+      const readOnlyFields = ['id', 'created_at', 'updated_at'];
+
+      // Determine field order
+      let fieldOrder = layout.fieldOrder || Object.keys(fieldLabels);
+
+      // Get or create field positions
+      let fieldPositions = layout.fieldPositions || {};
+
+      // If no positions saved, create default grid layout
+      if (!layout.fieldPositions) {
+        let row = 1, col = 1;
+        fieldOrder.forEach(key => {
+          if (layout.visibleFields.includes(key)) {
+            const isFullWidth = key === 'notes';
+            fieldPositions[key] = { row, col };
+
+            if (isFullWidth) {
+              col = 1;
+              row++;
+            } else {
+              col++;
+              if (col > layout.columns) {
+                col = 1;
+                row++;
+              }
+            }
+          }
+        });
+      }
+
+      // Build modal content
+      let html = '';
+      for (const key of fieldOrder) {
+        const label = fieldLabels[key];
+        if (!label) continue; // Skip if field doesn't exist
+
+        const value = data[key] || '';
+        const isFullWidth = key === 'notes';
+        const isReadOnly = readOnlyFields.includes(key);
+        const isVisible = layout.visibleFields.includes(key);
+        const hiddenClass = isVisible ? '' : 'hidden';
+
+        // Get grid position
+        const position = fieldPositions[key];
+        const gridStyle = position ? `style="grid-row: ${position.row}; grid-column: ${position.col}${isFullWidth ? ' / -1' : ''};"` : '';
+
+        if (isReadOnly) {
+          html += `
+            <div class="info-item ${isFullWidth ? 'full-width' : ''} ${hiddenClass}" draggable="true" data-field="${key}" ${gridStyle}>
+              <div class="info-label">${label}</div>
+              <div class="info-value">${value || 'N/A'}</div>
+            </div>
+          `;
+        } else if (isFullWidth) {
+          html += `
+            <div class="info-item full-width ${hiddenClass}" draggable="true" data-field="${key}" ${gridStyle}>
+              <div class="info-label">${label}</div>
+              <textarea class="info-input" data-field="${key}">${value}</textarea>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="info-item ${hiddenClass}" draggable="true" data-field="${key}" ${gridStyle}>
+              <div class="info-label">${label}</div>
+              <input type="text" class="info-input" data-field="${key}" value="${value}">
+            </div>
+          `;
+        }
+      }
+
+      // Add section headers
+      if (layout.headers && layout.headers.length > 0) {
+        layout.headers.forEach(header => {
+          html += `
+            <div class="section-header" draggable="true" data-header-id="${header.id}" style="grid-row: ${header.row};">
+              <input type="text" value="${header.text}" onchange="updateHeaderText('${header.id}', this.value)" placeholder="Section Header">
+              <button class="delete-header-btn" onclick="deleteHeader('${header.id}')" title="Delete Header">&times;</button>
+            </div>
+          `;
+        });
+      }
+
+      modalContent.innerHTML = html;
+
+      // Apply column and row count
+      modalContent.style.gridTemplateColumns = `repeat(${layout.columns}, 1fr)`;
+      modalContent.style.gridTemplateRows = `repeat(${layout.rows}, auto)`;
+
+      // Update modal-content class for responsive sizing
+      const modalWrapper = document.querySelector('.modal-content');
+      if (modalWrapper) {
+        // Remove all column classes
+        for (let i = 1; i <= 6; i++) {
+          modalWrapper.classList.remove(`columns-${i}`);
+        }
+        // Add current column class
+        modalWrapper.classList.add(`columns-${layout.columns}`);
+      }
+
+      // Update column and row input values
+      const columnInput = document.getElementById('columnInput');
+      if (columnInput) {
+        columnInput.value = layout.columns;
+      }
+      const rowInput = document.getElementById('rowInput');
+      if (rowInput) {
+        rowInput.value = layout.rows;
+      }
+
+      // Populate fields panel
+      populateFieldsPanel(fieldLabels, layout.visibleFields);
+
+      // Update field count
+      updateFieldCount();
+
+      // Apply saved modal size if exists
+      if (layout.modalSize) {
+        modalWrapper.style.width = layout.modalSize.width;
+        modalWrapper.style.height = layout.modalSize.height;
+      }
+
+      modal.classList.add('active');
+
+      // Initialize drag and drop for modal items
+      initModalDragDrop();
+
+      // Initialize resize functionality
+      initModalResize();
+    }
+
+    function initModalResize() {
+      const resizeHandle = document.querySelector('.resize-handle');
+      const modalContent = document.querySelector('.modal-content');
+      const modalOverlay = document.getElementById('containerModal');
+      let isResizing = false;
+      let startX, startY, startWidth, startHeight;
+
+      const handleMouseMove = function(e) {
+        if (!isResizing) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+
+        const newWidth = startWidth + deltaX;
+        const newHeight = startHeight + deltaY;
+
+        // Apply constraints
+        const minWidth = 400;
+        const minHeight = 400;
+        const maxWidth = window.innerWidth * 0.98;
+        const maxHeight = window.innerHeight * 0.98;
+
+        const constrainedWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+        const constrainedHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+
+        modalContent.style.width = constrainedWidth + 'px';
+        modalContent.style.height = constrainedHeight + 'px';
+      };
+
+      const handleMouseUp = function(e) {
+        if (isResizing) {
+          isResizing = false;
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+
+          // Remove event listeners
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+
+          // Prevent modal close on mouseup
+          e.stopPropagation();
+          e.preventDefault();
+
+          // Save the new size
+          const layout = loadModalLayout();
+          const rect = modalContent.getBoundingClientRect();
+          layout.modalSize = {
+            width: rect.width + 'px',
+            height: rect.height + 'px'
+          };
+          saveModalLayout(layout);
+
+          // Set resize end time and clear resize flag after delay
+          resizeEndTime = Date.now();
+          setTimeout(() => {
+            isResizingModal = false;
+          }, 100);
+
+          // Prevent click event that might close modal
+          setTimeout(() => {
+            resizeHandle.addEventListener('click', preventClick, true);
+          }, 0);
+        }
+      };
+
+      const preventClick = function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        resizeHandle.removeEventListener('click', preventClick, true);
+      };
+
+      resizeHandle.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        isResizingModal = true;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const rect = modalContent.getBoundingClientRect();
+        startWidth = rect.width;
+        startHeight = rect.height;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Add resize cursor to body
+        document.body.style.cursor = 'nwse-resize';
+        document.body.style.userSelect = 'none';
+
+        // Add event listeners
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+      });
+
+      // Prevent resize handle clicks from closing modal
+      resizeHandle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+      });
+    }
+
+    // Swap positions of two items in the grid
+    function swapItemPositions(item1, item2) {
+      const layout = loadModalLayout();
+
+      const header1Id = item1.getAttribute('data-header-id');
+      const header2Id = item2.getAttribute('data-header-id');
+      const field1Key = item1.getAttribute('data-field');
+      const field2Key = item2.getAttribute('data-field');
+
+      // Get current positions
+      let pos1, pos2;
+
+      if (header1Id) {
+        const header1 = layout.headers.find(h => h.id === header1Id);
+        pos1 = { row: header1.row };
+      } else if (field1Key) {
+        pos1 = layout.fieldPositions[field1Key];
+      }
+
+      if (header2Id) {
+        const header2 = layout.headers.find(h => h.id === header2Id);
+        pos2 = { row: header2.row };
+      } else if (field2Key) {
+        pos2 = layout.fieldPositions[field2Key];
+      }
+
+      if (!pos1 || !pos2) return;
+
+      // Swap positions in layout
+      if (header1Id && header2Id) {
+        // Both are headers
+        const header1 = layout.headers.find(h => h.id === header1Id);
+        const header2 = layout.headers.find(h => h.id === header2Id);
+        const tempRow = header1.row;
+        header1.row = header2.row;
+        header2.row = tempRow;
+      } else if (field1Key && field2Key) {
+        // Both are fields
+        const tempPos = { ...pos1 };
+        layout.fieldPositions[field1Key] = { ...pos2 };
+        layout.fieldPositions[field2Key] = tempPos;
+      } else if (header1Id && field2Key) {
+        // Header and field
+        const header1 = layout.headers.find(h => h.id === header1Id);
+        const tempRow = header1.row;
+        header1.row = pos2.row;
+        layout.fieldPositions[field2Key] = { row: tempRow, col: pos2.col };
+      } else if (field1Key && header2Id) {
+        // Field and header
+        const header2 = layout.headers.find(h => h.id === header2Id);
+        const tempRow = header2.row;
+        header2.row = pos1.row;
+        layout.fieldPositions[field1Key] = { row: tempRow, col: pos1.col };
+      }
+
+      saveModalLayout(layout);
+
+      // Update DOM positions
+      if (header1Id) {
+        const header = layout.headers.find(h => h.id === header1Id);
+        item1.style.gridRow = header.row;
+      } else if (field1Key) {
+        const pos = layout.fieldPositions[field1Key];
+        item1.style.gridRow = pos.row;
+        item1.style.gridColumn = item1.classList.contains('full-width') ? `${pos.col} / -1` : pos.col;
+      }
+
+      if (header2Id) {
+        const header = layout.headers.find(h => h.id === header2Id);
+        item2.style.gridRow = header.row;
+      } else if (field2Key) {
+        const pos = layout.fieldPositions[field2Key];
+        item2.style.gridRow = pos.row;
+        item2.style.gridColumn = item2.classList.contains('full-width') ? `${pos.col} / -1` : pos.col;
+      }
+
+      showMsg('✅ Positions swapped', 'status');
+    }
+
+    function initModalDragDrop() {
+      const items = document.querySelectorAll('.info-item, .section-header');
+      const grid = document.getElementById('modalContent');
+      let draggedItem = null;
+      let dragOverItem = null;
+
+      items.forEach(item => {
+        item.addEventListener('dragstart', function(e) {
+          draggedItem = this;
+          this.classList.add('dragging');
+          grid.classList.add('dragging-active');
+
+          const layout = loadModalLayout();
+          grid.style.setProperty('--grid-cols', layout.columns);
+
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/html', this.innerHTML);
+        });
+
+        item.addEventListener('dragend', function(e) {
+          this.classList.remove('dragging');
+          grid.classList.remove('dragging-active');
+          // Remove all drag-over highlights
+          document.querySelectorAll('.info-item, .section-header').forEach(el => {
+            el.classList.remove('drag-over');
+          });
+        });
+
+        // Highlight item when dragging over it
+        item.addEventListener('dragenter', function(e) {
+          if (this !== draggedItem && draggedItem) {
+            this.classList.add('drag-over');
+            dragOverItem = this;
+          }
+        });
+
+        item.addEventListener('dragleave', function(e) {
+          this.classList.remove('drag-over');
+        });
+
+        item.addEventListener('dragover', function(e) {
+          if (this !== draggedItem) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          }
+        });
+
+        // Handle drop on another item (swap)
+        item.addEventListener('drop', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (draggedItem && this !== draggedItem) {
+            // Swap positions
+            swapItemPositions(draggedItem, this);
+            this.classList.remove('drag-over');
+          }
+        });
+      });
+
+      // Allow dropping on the grid (empty space)
+      grid.addEventListener('dragover', function(e) {
+        // Only allow grid drop if not over an item
+        if (!e.target.classList.contains('info-item') &&
+            !e.target.classList.contains('section-header') &&
+            !e.target.closest('.info-item') &&
+            !e.target.closest('.section-header')) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        }
+      });
+
+      grid.addEventListener('drop', function(e) {
+        // Only handle grid drops (empty space), not item drops
+        if (e.target.classList.contains('info-item') ||
+            e.target.classList.contains('section-header') ||
+            e.target.closest('.info-item') ||
+            e.target.closest('.section-header')) {
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!draggedItem) return;
+
+        const layout = loadModalLayout();
+        const rect = grid.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Get grid dimensions
+        const columns = layout.columns;
+        const columnWidth = rect.width / columns;
+
+        // Calculate which column was clicked
+        const col = Math.floor(x / columnWidth) + 1;
+
+        // Calculate row based on y position and existing items
+        const allItems = Array.from(grid.children).filter(item =>
+          item.classList.contains('info-item') || item.classList.contains('section-header')
+        );
+
+        let targetRow = 1;
+        let foundRow = false;
+
+        // Sort items by their row position
+        const sortedItems = allItems.sort((a, b) => {
+          const rowA = parseInt(a.style.gridRow) || 1;
+          const rowB = parseInt(b.style.gridRow) || 1;
+          return rowA - rowB;
+        });
+
+        // Find which row the drop position corresponds to
+        for (let i = 0; i < sortedItems.length; i++) {
+          const item = sortedItems[i];
+          if (item === draggedItem) continue;
+
+          const itemRect = item.getBoundingClientRect();
+          const itemTop = itemRect.top - rect.top;
+          const itemBottom = itemTop + itemRect.height;
+
+          if (y < itemTop) {
+            // Drop is above this item
+            targetRow = parseInt(item.style.gridRow) || 1;
+            foundRow = true;
+            break;
+          } else if (y >= itemTop && y <= itemBottom) {
+            // Drop is within this item's row
+            targetRow = parseInt(item.style.gridRow) || 1;
+            foundRow = true;
+            break;
+          }
+        }
+
+        // If not found, drop after last item or use estimated row
+        if (!foundRow) {
+          if (sortedItems.length > 0) {
+            const lastItem = sortedItems[sortedItems.length - 1];
+            targetRow = (parseInt(lastItem.style.gridRow) || 1) + 1;
+          } else {
+            targetRow = Math.max(1, Math.ceil(y / 80));
+          }
+        }
+
+        // Constrain to valid ranges
+        const validCol = Math.max(1, Math.min(col, columns));
+        const validRow = Math.max(1, Math.min(targetRow, layout.rows));
+
+        // Check if dragged item is a header or a field
+        const headerId = draggedItem.getAttribute('data-header-id');
+        const fieldKey = draggedItem.getAttribute('data-field');
+
+        if (headerId) {
+          // Update header position
+          draggedItem.style.gridRow = validRow;
+
+          // Save header position
+          if (!layout.headers) {
+            layout.headers = [];
+          }
+          const header = layout.headers.find(h => h.id === headerId);
+          if (header) {
+            header.row = validRow;
+          }
+        } else if (fieldKey) {
+          // Update field position
+          const isFullWidth = draggedItem.classList.contains('full-width');
+
+          draggedItem.style.gridRow = validRow;
+          draggedItem.style.gridColumn = isFullWidth ? `${validCol} / -1` : validCol;
+
+          // Save field positions
+          if (!layout.fieldPositions) {
+            layout.fieldPositions = {};
+          }
+          layout.fieldPositions[fieldKey] = { row: validRow, col: validCol };
+        }
+
+        saveModalLayout(layout);
+
+        draggedItem.classList.remove('dragging');
+        draggedItem = null;
+      });
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('containerModal');
+      const fieldsSidebar = document.getElementById('fieldsSidebar');
+      const modalBody = document.getElementById('modalBody');
+      const toggleBtn = document.getElementById('fieldsPanelToggle');
+
+      modal.classList.remove('active');
+      fieldsSidebar.classList.remove('active');
+      modalBody.classList.remove('sidebar-open');
+
+      // Reset button state
+      if (toggleBtn) {
+        toggleBtn.style.background = '';
+        toggleBtn.style.color = '';
+      }
+
+      currentContainerData = null;
+    }
+
+    async function saveContainer() {
+      if (!currentContainerData) return;
+
+      // Collect updated values from inputs
+      const inputs = document.querySelectorAll('.info-input');
+      const updates = { updated_at: new Date().toISOString() };
+
+      inputs.forEach(input => {
+        const field = input.getAttribute('data-field');
+        updates[field] = input.value;
+      });
+
+      // Update in Supabase
+      const { error } = await supabaseClient
+        .from('containers')
+        .update(updates)
+        .eq('id', currentContainerData.id);
+
+      if (error) {
+        showMsg(`❌ Error: ${error.message}`, 'error');
+      } else {
+        showMsg('✅ Container updated successfully', 'status');
+        closeModal();
+        loadData(); // Refresh the table
+      }
+    }
+
+    // Track if we're currently or recently resizing
+    let isResizingModal = false;
+    let resizeEndTime = 0;
+
+    // Close modal when clicking outside
+    document.getElementById('containerModal').addEventListener('click', function(e) {
+      // Don't close if we just finished resizing (within 100ms)
+      if (isResizingModal || (Date.now() - resizeEndTime < 100)) {
+        return;
+      }
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+
+    // Double-click to view details
+    table.on("rowDblClick", function(e, row) {
+      const data = row.getData();
+      openModal(data);
+    });
+
+    // Toggle settings panel
+    function toggleSettingsPanel() {
+      const panel = document.getElementById('settingsPanel');
+      const btn = document.getElementById('settingsToggleBtn');
+
+      panel.classList.toggle('expanded');
+
+      if (panel.classList.contains('expanded')) {
+        btn.classList.add('active');
+        btn.textContent = '⚙️ Hide Settings';
+      } else {
+        btn.classList.remove('active');
+        btn.textContent = '⚙️ Settings';
+      }
+    }
+
+    // Quick Actions for Field Selection
+    function selectAllFields() {
+      document.querySelectorAll('#fieldsList input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+        toggleField(cb.getAttribute('data-field') || cb.id.replace('field-', ''), cb);
+      });
+    }
+
+    function deselectAllFields() {
+      document.querySelectorAll('#fieldsList input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+        toggleField(cb.getAttribute('data-field') || cb.id.replace('field-', ''), cb);
+      });
+    }
+
+    function resetFieldSelection() {
+      const layout = loadModalLayout();
+      const defaultFields = defaultModalLayout.visibleFields;
+
+      document.querySelectorAll('#fieldsList input[type="checkbox"]').forEach(cb => {
+        const field = cb.getAttribute('data-field') || cb.id.replace('field-', '');
+        cb.checked = defaultFields.includes(field);
+        toggleField(field, cb);
+      });
+    }
+
+    // Initial load
+    loadData();
+  </script>
+  <script src="/sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>LASIE TMS Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css" rel="stylesheet"/>
+  <link href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" rel="stylesheet"/>
+  <style>
+    body { margin:0; font-family:'Segoe UI',sans-serif; background:#f9f9fb; }
+    .main-content { padding:2rem; }
+    .card-summary {
+      border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);
+      padding:1.25rem; background:#fff; cursor:pointer; margin-bottom:1rem;
+    }
+    .card-summary h5 { font-size:1.1rem; margin-bottom:1rem; }
+    .card-table { border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
+    .card-table .card-header {
+      padding:.5rem 1rem; background:#fff; border-bottom:1px solid #eee; font-weight:500;
+    }
+    .card-table .card-body { padding:.5rem; }
+    .table-sm th, .table-sm td { padding:.3rem .5rem; font-size:.875rem; }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>TMS Dashboard</h2>
+      <button id="logout-btn" class="btn btn-outline-secondary">Log Out</button>
+    </div>
+
+    <div class="row gx-3 gy-4 mb-5">
+      <div class="col-md-3">
+        <div class="card-summary" data-link="containers.html">
+          <h5><i class="mdi mdi-package-variant-closed"></i> Load Status</h5>
+          <p class="load-status">Loading…</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card-summary" data-link="tabulator.html">
+          <h5><i class="mdi mdi-truck-delivery-outline"></i> Driver Activity</h5>
+          <p class="driver-activity">Loading…</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card-summary" data-link="tabulator.html">
+          <h5><i class="mdi mdi-cash-multiple"></i> Invoices</h5>
+          <p class="invoice-stats">Loading…</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card-summary" data-link="calendar.html">
+          <h5><i class="mdi mdi-ferry"></i> Terminal Appointments</h5>
+          <p class="appt-stats">Loading…</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-table mb-5">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Recent Loads</span>
+        <div class="d-flex align-items-center">
+          <div class="dropdown me-3">
+            <button class="btn btn-sm btn-secondary dropdown-toggle"
+                    type="button" id="statusFilterBtn"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+              Filter
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end p-3" aria-labelledby="statusFilterBtn">
+              <li class="form-check">
+                <input class="form-check-input status-filter" type="checkbox"
+                       value="Completed" id="filterCompleted">
+                <label class="form-check-label ms-2" for="filterCompleted">
+                  Completed
+                </label>
+              </li>
+              <li class="form-check">
+                <input class="form-check-input status-filter" type="checkbox"
+                       value="Incomplete" id="filterIncomplete">
+                <label class="form-check-label ms-2" for="filterIncomplete">
+                  Incomplete
+                </label>
+              </li>
+              <li class="form-check">
+                <input class="form-check-input status-filter" type="checkbox"
+                       value="Unbilled" id="filterUnbilled">
+                <label class="form-check-label ms-2" for="filterUnbilled">
+                  Unbilled
+                </label>
+              </li>
+            </ul>
+          </div>
+          <select id="rowsPerPage" class="form-select form-select-sm">
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body">
+        <table class="table table-striped table-sm mb-0" id="load-table">
+          <thead>
+            <tr>
+              <th>Container #</th>
+              <th>Status</th>
+              <th>Terminal</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody><tr><td colspan="4">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card-summary">
+      <h5><i class="mdi mdi-map-marker-multiple"></i> Driver Locations</h5>
+      <div id="driver-map" style="height:300px"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.26.0/dist/umd/supabase.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script>
+    // --- Supabase init (your anon key) ---
+    const { createClient } = window.supabase;
+    const supabase = createClient(
+      'https://bsaffwfvnnyaihmrmqwt.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzYWZmd2Z2bm55YWlobXJtcXd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDk1NzksImV4cCI6MjA3MzcyNTU3OX0.RyyuoUS8bcf-a18SWExPZurd8mbX4XLOITiSAARV7sI'
+    );
+
+    // --- Load data on page load ---
+    loadStats();
+    loadTable();
+    refreshMap();
+
+    document.getElementById('logout-btn').onclick = async () => {
+      console.log('Logout clicked');
+      // Placeholder for logout functionality
+    };
+
+    // --- Card Links ---
+    document.querySelectorAll('.card-summary[data-link]').forEach(c=> {
+      c.onclick = ()=> location.href = c.dataset.link;
+    });
+
+    // --- Top Stats ---
+    async function loadStats() {
+      console.log('📊 Loading stats...');
+      
+      // Loads
+      try {
+        console.log('🔍 Querying Containers table...');
+        const { count: total, error: totalError } = await supabase
+          .from('Containers').select('*',{ head:true, count:'exact' });
+        
+        console.log('📊 Total containers result:', { total, totalError });
+        
+        if (totalError) {
+          console.error('🚨 Containers table error:', totalError);
+          document.querySelector('.load-status').innerHTML = 'Error: ' + totalError.message;
+        } else {
+          console.log('✅ Total containers found:', total);
+          const { count: done, error: doneError } = await supabase
+            .from('Containers').select('*',{ head:true, count:'exact' })
+            .eq('Status','Completed');
+          
+          console.log('📊 Completed containers result:', { done, doneError });
+          
+          if (doneError) {
+            console.error('🚨 Completed containers error:', doneError);
+            document.querySelector('.load-status').innerHTML = `Total: <strong>${total || 0}</strong>`;
+          } else {
+            console.log('✅ Completed containers found:', done);
+            document.querySelector('.load-status').innerHTML =
+              `Total: <strong>${total || 0}</strong><br>
+               Completed: ${done || 0}, Incomplete: ${(total || 0) - (done || 0)}`;
+          }
+        }
+      } catch (error) {
+        console.error('🚨 Containers table exception:', error);
+        document.querySelector('.load-status').innerHTML = 'Error: ' + error.message;
+      }
+
+      // Drivers - Get from Containers table for now
+      try {
+        const { data: drivers, error } = await supabase
+          .from('Containers')
+          .select('"Pick Up Driver", "Return Driver", "Delivery Driver"');
+        
+        if (error) {
+          console.log('Drivers data error:', error);
+          document.querySelector('.driver-activity').innerHTML = 'No data yet';
+        } else {
+          // Count unique drivers
+          const uniqueDrivers = new Set();
+          drivers.forEach(row => {
+            if (row['Pick Up Driver']) uniqueDrivers.add(row['Pick Up Driver']);
+            if (row['Return Driver']) uniqueDrivers.add(row['Return Driver']);
+            if (row['Delivery Driver']) uniqueDrivers.add(row['Delivery Driver']);
+          });
+          document.querySelector('.driver-activity').innerHTML = `Total: <strong>${uniqueDrivers.size}</strong>`;
+        }
+      } catch (error) {
+        console.log('Drivers data not found, showing placeholder');
+        document.querySelector('.driver-activity').innerHTML = 'No data yet';
+      }
+
+      // Invoices - Get from Containers table
+      try {
+        const { data: invoices, error } = await supabase
+          .from('Containers')
+          .select('"Invoice #"')
+          .not('"Invoice #"', 'is', null);
+        
+        if (error) {
+          console.log('Invoices data error:', error);
+          document.querySelector('.invoice-stats').innerHTML = 'No data yet';
+        } else {
+          const uniqueInvoices = new Set(invoices.map(row => row['Invoice #']).filter(inv => inv));
+          document.querySelector('.invoice-stats').innerHTML = `Total: <strong>${uniqueInvoices.size}</strong>`;
+        }
+      } catch (error) {
+        console.log('Invoices data not found, showing placeholder');
+        document.querySelector('.invoice-stats').innerHTML = 'No data yet';
+      }
+
+      // Appointments - Get from Containers table
+      try {
+        const { data: appointments, error } = await supabase
+          .from('Containers')
+          .select('Appointment')
+          .not('Appointment', 'is', null);
+        
+        if (error) {
+          console.log('Appointments data error:', error);
+          document.querySelector('.appt-stats').innerHTML = 'No data yet';
+        } else {
+          const uniqueAppointments = new Set(appointments.map(row => row.Appointment).filter(apt => apt));
+          document.querySelector('.appt-stats').innerHTML = `Total: <strong>${uniqueAppointments.size}</strong>`;
+        }
+      } catch (error) {
+        console.log('Appointments data not found, showing placeholder');
+        document.querySelector('.appt-stats').innerHTML = 'No data yet';
+      }
+    }
+
+    // --- Recent Loads with filters & paging ---
+    let rowsPerPage = 5;
+    document.getElementById('rowsPerPage').onchange = e => {
+      rowsPerPage = e.target.value === 'all' ? Infinity : +e.target.value;
+      loadTable();
+    };
+    document.querySelectorAll('.status-filter').forEach(cb=>{
+      cb.onchange = loadTable;
+    });
+
+    async function loadTable() {
+      const tbody = document.querySelector('#load-table tbody');
+      tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+      
+      try {
+        console.log('📋 Loading table data...');
+        const { data: rows, error } = await supabase
+          .from('Containers')
+          .select('ID,Container,Status,Terminal')
+          .limit(10);
+
+        console.log('📋 Table query result:', { rows, error });
+
+        if (error) {
+          console.error('🚨 Table error:', error);
+          tbody.innerHTML = '<tr><td colspan="4">Error: ' + error.message + '</td></tr>';
+          return;
+        }
+
+        if (!rows || rows.length === 0) {
+          console.log('📋 No rows returned');
+          tbody.innerHTML = '<tr><td colspan="4">No containers found</td></tr>';
+          return;
+        }
+
+        console.log('📋 Found rows:', rows.length);
+
+        const active = Array.from(document.querySelectorAll('.status-filter:checked'))
+                            .map(i=>i.value);
+
+        let filtered = rows.filter(r=>{
+          if (active.length === 0) return true;
+          const done = r.Status === 'Completed';
+          const incomplete = !done;
+          return (active.includes('Completed') && done)
+              || (active.includes('Incomplete') && incomplete);
+        });
+
+        const page = filtered.slice(0, rowsPerPage);
+        if (!page.length) {
+          tbody.innerHTML = '<tr><td colspan="4">No matching loads</td></tr>';
+        } else {
+          tbody.innerHTML = page.map(r=>`
+            <tr>
+              <td>${r.Container || 'N/A'}</td>
+              <td>${r.Status || 'Unknown'}</td>
+              <td>${r.Terminal || ''}</td>
+              <td>${
+                r.Status !== 'Completed'
+                  ? `<button class="btn btn-sm btn-success"
+                               onclick="markDone('${r.ID}')">Done</button>`
+                  : '<span class="badge bg-secondary">Done</span>'
+              }</td>
+            </tr>
+          `).join('');
+        }
+      } catch (error) {
+        console.log('Table loading error:', error);
+        tbody.innerHTML = '<tr><td colspan="4">No data available yet</td></tr>';
+      }
+    }
+    window.markDone = async id => {
+      await supabase.from('Containers').update({ Status:'Completed' }).eq('ID',id);
+      loadTable(); loadStats();
+    };
+
+    // --- Leaflet Map ---
+    const map = L.map('driver-map').setView([33.75, -118.25], 10);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    async function refreshMap() {
+      try {
+        // For now, show sample locations since we don't have driver coordinates
+        map.eachLayer(l=> l instanceof L.Marker && map.removeLayer(l));
+        
+        // Add sample markers for LA/Long Beach area
+        const sampleLocations = [
+          { name: 'Long Beach Terminal', lat: 33.7328, lng: -118.2340, status: 'Active' },
+          { name: 'LA Terminal', lat: 33.7175, lng: -118.2720, status: 'Active' },
+          { name: 'Gardena Office', lat: 33.8903, lng: -118.3081, status: 'Office' }
+        ];
+        
+        sampleLocations.forEach(location => {
+          const color = location.status === 'Active' ? 'green' : 'blue';
+          const icon = L.icon({
+            iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
+            iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[0,-30]
+          });
+          L.marker([location.lat, location.lng], {icon})
+           .addTo(map)
+           .bindPopup(`<strong>${location.name}</strong><br>Status: ${location.status}`);
+        });
+      } catch(e){ console.error('Map error',e); }
+    }
+    setInterval(refreshMap,30000);
+  </script>
+  <script src="/sidebar.js"></script>
+</body>
+</html>

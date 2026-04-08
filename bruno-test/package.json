@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@usebruno/cli": "^3.2.2",
+    "newman": "^6.2.2"
+  }
+}

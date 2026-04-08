@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Containers – Dashboard</title>
+  <!-- Distinctive typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --sidebar-width: 240px;
+      --sidebar-collapsed: 60px;
+      --primary-color: #1f6feb;
+      --primary-hover: #1854d4;
+      --accent-color: #0969da;
+      --success-color: #1a7f37;
+      --error-color: #cf222e;
+      --bg-light: #f6f8fa;
+      --bg-lighter: #ffffff;
+      --text-dark: #0d1117;
+      --text-muted: #57606a;
+      --border-color: #d0d7de;
+      --table-header-bg: #f6f8fa;
+      --table-row-odd: #ffffff;
+      --table-row-even: #f6f8fa;
+      --table-row-hover: #eaeef2;
+      --modal-overlay: rgba(13, 17, 23, 0.65);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #layout { height: 100%; }
+    body { font-family: 'Source Sans 3', sans-serif; background: var(--bg-light); color: var(--text-dark); overflow: hidden; font-size: 14px; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', sans-serif; font-weight: 600; }
+
+    /* Layout */
+    .layout { display: flex; height: 100%; transition: margin-left .3s; }
+
+    /* Content */
+    body.sidebar-open .content {
+      margin-left: var(--sidebar-width); padding: 2rem;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      transition: margin-left .3s ease;
+    }
+    body.sidebar-collapsed .content {
+      margin-left: var(--sidebar-collapsed); padding: 2rem;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      transition: margin-left .3s ease;
+    }
+    .content {
+      margin-left: var(--sidebar-width);
+      padding: 2rem;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      transition: margin-left .3s ease;
+    }
+    .content h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--text-dark); }
+
+    /* Loading spinner */
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(13, 17, 23, 0.1); border-top-color: var(--primary-color); border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Empty state */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; color: var(--text-muted); text-align: center; }
+    .empty-state-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+    .empty-state p { font-size: 1.05rem; margin-bottom: 0.5rem; }
+
+    /* Actions */
+    .actions { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .6rem 1.2rem; border: none; border-radius: 8px;
+      font-size: .95rem; font-weight: 500; cursor: pointer; font-family: 'Poppins', sans-serif;
+      transition: all .2s ease; position: relative;
+    }
+    .btn-filter { background: var(--primary-color); color: #fff; }
+    .btn-filter:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3); }
+    .btn-add { background: var(--success-color); color: #fff; }
+    .btn-add:hover { background: #158631; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(26, 127, 55, 0.3); }
+    .btn-delete { background: var(--error-color); color: #fff; font-size: 0.8rem; padding: 0.4rem 0.6rem; }
+    .btn-delete:hover { background: #da3633; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(207, 34, 46, 0.3); }
+    .btn:active { transform: translateY(0); }
+    .actions-header { width: 80px; min-width: 80px; text-align: center; }
+
+    /* Modals */
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--modal-overlay); justify-content: center; align-items: center; z-index: 2000;
+      animation: fadeIn .2s ease-out;
+    }
+    .modal.show { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-content {
+      background: var(--bg-lighter); width: 520px; max-height: 80vh; padding: 1.5rem;
+      border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+      overflow-y: auto; position: relative;
+      animation: slideUp .3s ease-out;
+    }
+    .modal-close { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; transition: color .2s; }
+    .modal-close:hover { color: var(--text-dark); }
+    form.grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1.5rem; margin-top: 1rem; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { margin-bottom: .5rem; font-size: .85rem; font-weight: 500; color: var(--text-dark); }
+    .form-group input { padding: .6rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: .95rem; transition: border-color .2s, box-shadow .2s; }
+    .form-group input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.1); }
+
+    /* Table */
+    .table-wrapper {
+      font-size: 13px;
+      flex: 1;
+      overflow-x: auto;
+      overflow-y: auto;
+      border-radius: 12px;
+      background: var(--bg-lighter);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.08);
+      border: 1px solid var(--border-color);
+      position: relative;
+    }
+    .table-wrapper.loading { opacity: 0.6; pointer-events: none; }
+    .table-wrapper select { font-size: inherit; padding: .4rem; border: 1px solid var(--border-color); border-radius: 6px; background: white; cursor: pointer; }
+
+    /* Multi-select filter dropdown */
+    .multi-filter { position: relative; margin-top: 4px; }
+    .multi-filter-btn {
+      display: flex; align-items: center; justify-content: space-between; gap: 4px;
+      width: 100%; padding: 0.3rem 0.4rem; font-size: inherit;
+      border: 1px solid var(--border-color); border-radius: 6px;
+      background: white; cursor: pointer; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .multi-filter-btn:hover { border-color: var(--accent-color); }
+    .multi-filter-btn.active { border-color: var(--accent-color); color: var(--text-dark); background: rgba(31,111,235,0.05); }
+    .multi-filter-btn .arrow { font-size: 0.6rem; flex-shrink: 0; }
+    .multi-filter-dropdown {
+      display: none; position: absolute; top: 100%; left: 0; z-index: 100;
+      min-width: 180px; max-height: 250px; overflow-y: auto;
+      background: white; border: 1px solid var(--border-color);
+      border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      margin-top: 2px; padding: 4px 0;
+    }
+    .multi-filter-dropdown.show { display: block; }
+    .multi-filter-dropdown .mf-search {
+      width: calc(100% - 8px); margin: 4px; padding: 0.3rem 0.5rem;
+      border: 1px solid var(--border-color); border-radius: 4px;
+      font-size: 0.8rem; font-family: inherit; outline: none;
+    }
+    .multi-filter-dropdown .mf-search:focus { border-color: var(--accent-color); }
+    .multi-filter-dropdown label {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0.25rem 0.6rem; cursor: pointer; font-size: 0.8rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .multi-filter-dropdown label:hover { background: var(--bg-light); }
+    .multi-filter-dropdown input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
+    .multi-filter-dropdown .mf-actions {
+      display: flex; gap: 4px; padding: 4px 6px; border-top: 1px solid var(--border-color); margin-top: 2px;
+    }
+    .multi-filter-dropdown .mf-actions button {
+      flex: 1; padding: 0.2rem; font-size: 0.7rem; border: 1px solid var(--border-color);
+      border-radius: 4px; background: white; cursor: pointer; font-family: inherit;
+    }
+    .multi-filter-dropdown .mf-actions button:hover { background: var(--bg-light); }
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+      table-layout: auto;
+      min-width: 0;
+    }
+    thead th { position: sticky; top: 0; background: var(--table-header-bg);
+      padding: .75rem; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border-color); z-index: 1;
+      font-family: 'Poppins', sans-serif;
+    }
+    tbody tr { transition: background-color .15s ease; }
+    tbody tr:nth-child(odd) { background: var(--table-row-odd); }
+    tbody tr:nth-child(even) { background: var(--table-row-even); }
+    tbody tr:hover { background-color: var(--table-row-hover); }
+    th, td { padding: .6rem; border-right: 1px solid var(--border-color); white-space: nowrap; }
+    th:last-child, td:last-child { border-right: none; }
+    .sort-indicator { margin-left: .25rem; font-size: .7rem; opacity: 0.6; }
+    td[contenteditable] { background: #fffbf0; position: relative; }
+    td[contenteditable]:focus { outline: 2px solid var(--accent-color); outline-offset: -2px; }
+    .status { margin-top: 1rem; color: var(--success-color); font-weight: 500; }
+    .error { margin-top: 1rem; color: var(--error-color); font-weight: 500; }
+    tbody tr { cursor: pointer; }
+
+    /* Container Details Modal */
+    #details-modal .modal-content { width: 900px; max-width: 95vw; max-height: 90vh; }
+    .details-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #e1e5ea;
+    }
+    .details-header h2 { font-size: 1.5rem; color: var(--primary-color); }
+    .details-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .detail-card {
+      background: var(--bg-light); padding: 1.2rem; border-radius: 8px;
+      border-left: 4px solid var(--accent-color);
+      transition: all .2s ease;
+    }
+    .detail-card:hover { background: #f6f8fa; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .detail-card label {
+      display: block; font-size: 0.75rem; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase;
+      margin-bottom: 0.5rem; letter-spacing: 0.5px;
+    }
+    .detail-card input {
+      width: 100%; padding: 0.6rem; border: 1px solid var(--border-color);
+      border-radius: 6px; font-size: 0.95rem; background: white; font-family: inherit; transition: all .2s;
+    }
+    .detail-card input:focus {
+      outline: none; border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
+    }
+    .detail-card input:disabled { background: #f6f8fa; color: var(--text-muted); cursor: not-allowed; }
+    .detail-card .value {
+      font-size: 1rem; font-weight: 500; color: var(--text-dark);
+      min-height: 1.5rem;
+    }
+    .details-actions {
+      display: flex; gap: 1rem; justify-content: flex-end;
+      padding-top: 1rem; border-top: 2px solid var(--border-color);
+    }
+    .btn-save { background: var(--success-color); color: white; }
+    .btn-save:hover { background: #158631; box-shadow: 0 4px 12px rgba(26, 127, 55, 0.3); }
+    .btn-cancel { background: #6c757d; color: white; }
+    .btn-cancel:hover { background: #5a6268; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3); }
+
+    /* Document Link Styles */
+    .doc-link-btn {
+      background: none; border: none; padding: 0.4rem 0.6rem;
+      cursor: pointer; font-size: 1.2rem; opacity: 0.7;
+      transition: opacity .2s, transform .2s;
+      border-radius: 4px;
+    }
+    .doc-link-btn:hover { opacity: 1; transform: scale(1.1); background: rgba(31, 111, 235, 0.1); }
+
+    .doc-preview-modal .modal-content {
+      width: 90vw; height: 90vh; max-width: 1200px; max-height: 85vh;
+      display: flex; flex-direction: column; padding: 1.5rem;
+      animation: slideUp .3s ease-out;
+    }
+    .doc-preview-header {
+      margin-bottom: 1rem; padding-bottom: 1rem;
+      border-bottom: 2px solid var(--border-color);
+      flex-shrink: 0;
+    }
+    .doc-preview-header h2 { margin: 0; font-size: 1.2rem; }
+    .doc-preview-container {
+      flex: 1; margin-bottom: 1rem; overflow: hidden;
+      border: 1px solid var(--border-color); border-radius: 8px;
+      background: #f5f5f5; display: flex; align-items: center;
+      justify-content: center; min-height: 200px;
+    }
+    .doc-preview-frame {
+      width: 100%; height: 100%; border: none;
+      background: white;
+    }
+    .doc-actions {
+      display: flex; gap: 1rem; justify-content: flex-end;
+      flex-wrap: wrap; flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .layout { margin-left: 0; }
+      .content { margin-left: 0; padding: 1rem; }
+      .content h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+      .actions { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+      .btn { font-size: 0.9rem; padding: 0.7rem 1rem; }
+      #font-size-select { max-width: none; width: 100%; }
+      .table-wrapper { font-size: 12px; }
+      .modal-content { width: 90vw; max-width: 100%; padding: 1.25rem; }
+      #details-modal .modal-content { width: 95vw; }
+      .details-grid { grid-template-columns: 1fr; }
+      form.grid { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+  <div id="layout" class="layout">
+    <main class="content">
+      <h1>Containers Dashboard</h1>
+      <div class="actions">
+        <input type="text" id="search-input" placeholder="🔍 Search" style="padding:0.5rem;border:1px solid #ccc;border-radius:6px;width:120px;font-size:0.85rem;">
+        <span style="display:inline-flex;align-items:center;background:#e9ecef;padding:2px 8px;border-radius:6px;border:1px solid #ccc;">
+          <span style="font-size:0.75rem;color:#666;margin-right:4px;">📅</span>
+          <input type="date" id="date-from" style="border:none;background:transparent;font-size:0.8rem;outline:none;width:100px;" title="From date">
+          <span style="color:#999;margin:0 2px;">→</span>
+          <input type="date" id="date-to" style="border:none;background:transparent;font-size:0.8rem;outline:none;width:100px;" title="To date">
+        </span>
+        <button id="filter-all" class="btn btn-filter" style="background: #6c757d;">📋 All</button>
+        <button id="filter-completed" class="btn btn-filter">✅ Completed</button>
+        <button id="filter-billing" class="btn btn-filter">💰 Need to Bill</button>
+        <button id="filter-docs" class="btn btn-filter">📄 Missing Docs</button>
+        <button id="column-btn" class="btn btn-filter">🔍 Filter Columns</button>
+        <button id="add-btn" class="btn btn-add">➕ Add Container</button>
+        <button id="export-csv" class="btn btn-filter" style="background:#28a745;">📥 Export</button>
+        <button id="help-btn" class="btn btn-filter" style="background:#6c757d;">? Help</button>
+        <button id="autorefresh-btn" class="btn btn-filter" style="background:#6c757d;">🔄 Auto</button>
+        <select id="page-size" style="padding:0.4rem;border-radius:6px;border:1px solid #ccc;">
+          <option value="25">25/page</option>
+          <option value="50" selected>50/page</option>
+          <option value="100">100/page</option>
+        </select>
+        <button id="prev-page" class="btn btn-filter" style="padding:0.4rem 0.6rem;">◀</button>
+        <span id="page-info" style="font-size:0.85rem;margin:0 0.5rem;">1</span>
+        <button id="next-page" class="btn btn-filter" style="padding:0.4rem 0.6rem;">▶</button>
+        <select id="font-size-select" class="btn" style="max-width: 100px;">
+          <option value="8px">8px</option>
+          <option value="10px">10px</option>
+          <option value="12px" selected>12px</option>
+          <option value="14px">14px</option>
+          <option value="16px">16px</option>
+          <option value="18px">18px</option>
+          <option value="20px">20px</option>
+        </select>
+      </div>
+
+      <!-- Filter Columns Modal -->
+      <div id="column-modal" class="modal">
+        <div class="modal-content">
+          <span id="close-column" class="modal-close">×</span>
+          <h2>Select Columns</h2>
+          <form id="column-form" class="grid"></form>
+          <div>
+            <button id="apply-columns" class="btn btn-add" type="button">Apply</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Container Modal -->
+      <div id="add-modal" class="modal">
+        <div class="modal-content">
+          <span id="close-add" class="modal-close">×</span>
+          <h2>Add New Container</h2>
+          <form id="add-form" class="grid"></form>
+          <div>
+            <button id="save-add" class="btn btn-add" type="button">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Container Details Modal -->
+      <div id="details-modal" class="modal">
+        <div class="modal-content">
+          <span id="close-details" class="modal-close">×</span>
+          <div class="details-header">
+            <h2 id="details-title">Container Details</h2>
+            <span id="details-status" style="font-size: 0.9rem; color: var(--text-muted);"></span>
+          </div>
+          <div id="details-content" class="details-grid"></div>
+          <div class="details-actions">
+            <button id="cancel-details" class="btn btn-cancel">Cancel</button>
+            <button id="save-details" class="btn btn-save">💾 Save Changes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Document Preview Modal -->
+      <div id="doc-preview-modal" class="modal doc-preview-modal">
+        <div class="modal-content">
+          <span id="close-doc-preview" class="modal-close">×</span>
+          <div class="doc-preview-header">
+            <h2 id="doc-preview-title"></h2>
+            <p id="doc-preview-hint" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; display: none;"></p>
+          </div>
+          <div class="doc-preview-container">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 1rem;">
+              <div class="spinner" id="doc-loading-spinner"></div>
+              <p style="color: var(--text-muted);">Loading document...</p>
+            </div>
+            <iframe id="doc-preview-frame" class="doc-preview-frame" frameborder="0" allow="fullscreen" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" style="display: none;"></iframe>
+          </div>
+          <div class="doc-actions">
+            <button id="doc-open-tab" class="btn btn-filter">🔗 Open in New Tab</button>
+            <button id="doc-share-email" class="btn btn-add">📧 Share via Email</button>
+            <button id="doc-download" class="btn btn-filter">💾 Download</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Help Modal -->
+      <div id="help-modal" class="modal">
+        <div class="modal-content" style="width:600px;max-width:95vw;">
+          <span id="close-help" class="modal-close">×</span>
+          <h3 style="margin-bottom:0.75rem;">⌨️ Keyboard Shortcuts</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.4rem;font-size:0.85rem;">
+            <div style="background:#e3f2fd;padding:0.4rem;border-radius:4px;text-align:center;"><strong>F</strong><br><span style="font-size:0.7rem;">Search</span></div>
+            <div style="background:#e3f2fd;padding:0.4rem;border-radius:4px;text-align:center;"><strong>A</strong><br><span style="font-size:0.7rem;">Add</span></div>
+            <div style="background:#e3f2fd;padding:0.4rem;border-radius:4px;text-align:center;"><strong>E</strong><br><span style="font-size:0.7rem;">Export</span></div>
+            <div style="background:#e3f2fd;padding:0.4rem;border-radius:4px;text-align:center;"><strong>R</strong><br><span style="font-size:0.7rem;">Refresh</span></div>
+            <div style="background:#fff3e0;padding:0.4rem;border-radius:4px;text-align:center;"><strong>←</strong><br><span style="font-size:0.7rem;">Prev</span></div>
+            <div style="background:#fff3e0;padding:0.4rem;border-radius:4px;text-align:center;"><strong>→</strong><br><span style="font-size:0.7rem;">Next</span></div>
+            <div style="background:#e8f5e9;padding:0.4rem;border-radius:4px;text-align:center;"><strong>Del</strong><br><span style="font-size:0.7rem;">Delete</span></div>
+            <div style="background:#fce4ec;padding:0.4rem;border-radius:4px;text-align:center;"><strong>Esc</strong><br><span style="font-size:0.7rem;">Close</span></div>
+          </div>
+          <h3 style="margin:0.75rem 0 0.5rem;">🔍 Filters</h3>
+          <p style="font-size:0.8rem;color:#666;background:#f6f8fa;padding:0.5rem;border-radius:4px;">
+            <strong>Search:</strong> Type in search box to filter<br>
+            <strong>Date:</strong> Use date range to filter by move_date<br>
+            <strong>Quick:</strong> Click filter buttons (All/Completed/Bill/Docs)
+          </p>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="containers-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="empty-state" class="empty-state" style="display:none;">
+        <div class="empty-state-icon">📦</div>
+        <p>No containers found</p>
+      </div>
+      <div id="message" class="status"></div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Modal controls
+    const columnBtn = document.getElementById('column-btn'),
+          columnModal = document.getElementById('column-modal'),
+          closeColumn = document.getElementById('close-column'),
+          addBtn = document.getElementById('add-btn'),
+          addModal = document.getElementById('add-modal'),
+          closeAdd = document.getElementById('close-add'),
+          detailsModal = document.getElementById('details-modal'),
+          closeDetails = document.getElementById('close-details'),
+          cancelDetails = document.getElementById('cancel-details'),
+          docPreviewModal = document.getElementById('doc-preview-modal'),
+          closeDocPreview = document.getElementById('close-doc-preview');
+    columnBtn.onclick = () => { columnModal.classList.add('show'); columnModal.style.display = 'flex'; };
+    closeColumn.onclick = () => { columnModal.classList.remove('show'); columnModal.style.display = 'none'; };
+    addBtn.onclick = () => { buildAddForm(); addModal.classList.add('show'); addModal.style.display = 'flex'; };
+    closeAdd.onclick = () => { addModal.classList.remove('show'); addModal.style.display = 'none'; };
+    closeDetails.onclick = () => { detailsModal.classList.remove('show'); detailsModal.style.display = 'none'; };
+    cancelDetails.onclick = () => { detailsModal.classList.remove('show'); detailsModal.style.display = 'none'; };
+    closeDocPreview.onclick = () => { docPreviewModal.classList.remove('show'); docPreviewModal.style.display = 'none'; };
+    document.getElementById('help-btn').onclick = () => { document.getElementById('help-modal').classList.add('show'); };
+    document.getElementById('close-help').onclick = () => { document.getElementById('help-modal').classList.remove('show'); };
+    document.getElementById('help-modal').onclick = e => { if (e.target.id === 'help-modal') document.getElementById('help-modal').classList.remove('show'); };
+    
+    // Auto-refresh
+    let autoRefreshInterval = null;
+    let autoRefreshEnabled = false;
+    document.getElementById('autorefresh-btn').onclick = () => {
+      autoRefreshEnabled = !autoRefreshEnabled;
+      const btn = document.getElementById('autorefresh-btn');
+      if (autoRefreshEnabled) {
+        btn.style.background = '#28a745';
+        showMsg('Auto-refresh enabled (30s)', 'status');
+        autoRefreshInterval = setInterval(() => load(), 30000);
+      } else {
+        btn.style.background = '#6c757d';
+        showMsg('Auto-refresh disabled', 'status');
+        clearInterval(autoRefreshInterval);
+      }
+    };
+
+    // Quick filter buttons
+    const updateFilterButtons = () => {
+      const filterBtns = ['filter-all', 'filter-completed', 'filter-billing', 'filter-docs'];
+      filterBtns.forEach(id => {
+        const btn = document.getElementById(id);
+        const filterName = id.replace('filter-', '');
+        if (currentFilter === filterName) {
+          btn.style.background = 'var(--accent-color)';
+          btn.style.color = '#fff';
+        } else {
+          btn.style.background = 'var(--primary-color)';
+          btn.style.color = '#fff';
+        }
+      });
+    };
+
+    document.getElementById('filter-all').onclick = () => { currentFilter = 'all'; updateFilterButtons(); filterSort(); };
+
+    // Search and date filters
+    document.getElementById('search-input').oninput = e => {
+      searchTerm = e.target.value.trim();
+      currentPage = 1;
+      load();
+    };
+    
+    document.getElementById('date-from').onchange = e => {
+      dateFrom = e.target.value;
+      currentPage = 1;
+      load();
+    };
+    
+    document.getElementById('date-to').onchange = e => {
+      dateTo = e.target.value;
+      currentPage = 1;
+      load();
+    };
+    document.getElementById('filter-completed').onclick = () => { currentFilter = 'completed'; updateFilterButtons(); filterSort(); };
+    document.getElementById('filter-billing').onclick = () => { currentFilter = 'billing'; updateFilterButtons(); filterSort(); };
+    document.getElementById('filter-docs').onclick = () => { currentFilter = 'docs'; updateFilterButtons(); filterSort(); };
+
+    // Pagination handlers
+    document.getElementById('page-size').onchange = e => { pageSize = parseInt(e.target.value); currentPage = 1; load(); };
+    document.getElementById('prev-page').onclick = () => { if(currentPage > 1) { currentPage--; load(); } };
+    document.getElementById('next-page').onclick = () => { if((currentPage * pageSize) < totalCount) { currentPage++; load(); } };
+
+    // CSV Export
+    document.getElementById('export-csv').onclick = async () => {
+      showMsg('Exporting...', 'status');
+      let query = supabaseClient.from('containers').select('*');
+      if (searchTerm) query = query.or(`container_number.ilike.%${searchTerm}%,customer.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,Company.ilike.%${searchTerm}%,Terminal.ilike.%${searchTerm}%`);
+      if (dateFrom) query = query.gte('move_date', dateFrom);
+      if (dateTo) query = query.lte('move_date', dateTo);
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (error) return showMsg('Export failed: ' + error.message, 'error');
+      if (!data || data.length === 0) return showMsg('No data to export', 'error');
+      const cols = Object.keys(data[0]);
+      const csvRows = [cols.join(',')];
+      data.forEach(row => {
+        const values = cols.map(col => {
+          const val = row[col];
+          if (val === null || val === undefined) return '';
+          const str = String(val);
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) return '"' + str.replace(/"/g, '""') + '"';
+          return str;
+        });
+        csvRows.push(values.join(','));
+      });
+      const csv = csvRows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `containers_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showMsg(`Exported ${data.length} rows`, 'status');
+    };
+
+    let displayedRowCount = 0; // tracks how many rows are actually shown after client-side filters
+
+    function updatePagination() {
+      const totalPages = Math.ceil(totalCount / pageSize);
+      // A filter is truly active only if it actually reduced the visible rows
+      const isFiltered = displayedRowCount < allData.length;
+
+      if (isFiltered) {
+        document.getElementById('page-info').textContent = `Showing ${displayedRowCount} of ${totalCount} containers`;
+        document.getElementById('prev-page').disabled = true;
+        document.getElementById('next-page').disabled = true;
+      } else {
+        document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages} (${totalCount} total)`;
+        document.getElementById('prev-page').disabled = currentPage <= 1;
+        document.getElementById('next-page').disabled = (currentPage * pageSize) >= totalCount;
+      }
+    }
+
+    // Supabase init
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(
+      'https://bsaffwfvnnyaihmrmqwt.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzYWZmd2Z2bm55YWlobXJtcXd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDk1NzksImV4cCI6MjA3MzcyNTU3OX0.RyyuoUS8bcf-a18SWExPZurd8mbX4XLOITiSAARV7sI'
+    );
+
+    // Table & state
+    const table = document.getElementById('containers-table'),
+          theadEl = table.querySelector('thead'),
+          tbodyEl = table.querySelector('tbody'),
+          msgEl = document.getElementById('message');
+    let allData = [], allCols = [], sortConfig = { key: null, direction: 'asc' }, dragSrc = null, currentFilter = 'all', searchTerm = '', dateFrom = '', dateTo = '';
+    let currentPage = 1, pageSize = 50, totalCount = 0;
+    let allFilterValues = {}; // stores unique values per column from the ENTIRE database
+
+    async function loadFilterOptions() {
+      const { data, error } = await supabaseClient.from('containers').select('*');
+      if (error || !data) return;
+      const cols = data.length > 0 ? Object.keys(data[0]) : [];
+      cols.forEach(c => {
+        const hasEmpty = data.some(r => r[c] == null || r[c] === '');
+        const vals = [...new Set(data.map(r => r[c]).filter(v => v != null && v !== ''))].sort();
+        if (hasEmpty) vals.unshift('__empty__');
+        allFilterValues[c] = vals;
+      });
+    }
+
+    async function load() {
+      console.log('Loading containers data...', { searchTerm, dateFrom, dateTo });
+      
+      // Build query with filters
+      let query = supabaseClient.from('containers').select('*', { count: 'exact' });
+      
+      // Apply search filter
+      if (searchTerm) {
+        query = query.or(`container_number.ilike.%${searchTerm}%,customer.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,Company.ilike.%${searchTerm}%,Terminal.ilike.%${searchTerm}%,pickup.ilike.%${searchTerm}%,dropoff.ilike.%${searchTerm}%,chassis.ilike.%${searchTerm}%`);
+      }
+      
+      // Apply date filters
+      if (dateFrom) {
+        query = query.gte('move_date', dateFrom);
+      }
+      if (dateTo) {
+        query = query.lte('move_date', dateTo);
+      }
+      
+      // Get count
+      const { count } = await query;
+      totalCount = count || 0;
+      
+      // Get paginated data
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      
+      let dataQuery = supabaseClient.from('containers').select('*');
+      
+      if (searchTerm) {
+        dataQuery = dataQuery.or(`container_number.ilike.%${searchTerm}%,customer.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,Company.ilike.%${searchTerm}%,Terminal.ilike.%${searchTerm}%,pickup.ilike.%${searchTerm}%,dropoff.ilike.%${searchTerm}%,chassis.ilike.%${searchTerm}%`);
+      }
+      if (dateFrom) {
+        dataQuery = dataQuery.gte('move_date', dateFrom);
+      }
+      if (dateTo) {
+        dataQuery = dataQuery.lte('move_date', dateTo);
+      }
+      
+      const { data, error } = await dataQuery
+        .order('created_at', { ascending: false })
+        .range(from, to);
+        
+      console.log('Containers query result:', { data, error, totalCount });
+      if (error) return showMsg(error.message, 'error');
+      allData = data; 
+      if (data.length > 0) allCols = Object.keys(data[0]);
+      console.log('Found containers:', data.length, 'of', totalCount);
+      displayedRowCount = data.length;
+      buildColumnForm(); renderHeader();
+      // Apply filters — filterSort handles empty Sets as "show all"
+      filterSort();
+      // Show all columns by default
+      document.querySelectorAll('[data-col]').forEach(el=>el.style.display='');
+      updateFilterButtons();
+    }
+
+    function buildColumnForm() {
+      const form = document.getElementById('column-form'); form.innerHTML = '';
+      
+      // Load saved preferences
+      const savedCols = localStorage.getItem('containers_visible_cols');
+      const saved = savedCols ? JSON.parse(savedCols) : null;
+      
+      allCols.forEach(c => {
+        const lbl = document.createElement('label'), chk = document.createElement('input');
+        chk.type='checkbox'; chk.value=c; 
+        chk.checked = saved ? saved.includes(c) : true;
+        lbl.append(chk, c);
+        form.append(lbl);
+      });
+      
+      // Apply saved columns on load
+      if (saved) {
+        setTimeout(() => {
+          document.querySelectorAll('[data-col]').forEach(el=>el.style.display = saved.includes(el.dataset.col)?'':'none');
+        }, 100);
+      }
+      
+      document.getElementById('apply-columns').onclick = () => {
+        const visible = Array.from(form.querySelectorAll('input:checked')).map(i=>i.value);
+        localStorage.setItem('containers_visible_cols', JSON.stringify(visible));
+        document.querySelectorAll('[data-col]').forEach(el=>el.style.display = visible.includes(el.dataset.col)?'':'none');
+        columnModal.classList.remove('show');
+        columnModal.style.display='none';
+      };
+    }
+
+    function buildAddForm() {
+      const form = document.getElementById('add-form'); form.innerHTML = '';
+      allCols.forEach(c => { if(c.toLowerCase()==='id') return;
+        const grp=document.createElement('div'); grp.className='form-group';
+        const lbl=document.createElement('label'); lbl.textContent=c;
+        const inp=document.createElement('input'); inp.name=c; inp.type='text';
+        grp.append(lbl, inp); form.append(grp);
+      });
+      document.getElementById('save-add').onclick = async () => {
+        const vals = {};
+        new FormData(document.getElementById('add-form')).forEach((v,k)=>vals[k]=v||null);
+        const pk = allCols[0];
+
+        // Generate UUID for id field if needed
+        if (pk.toLowerCase() === 'id' && !vals[pk]) {
+          vals[pk] = crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        if (!vals[pk]) { alert(`${pk} is required`); return; }
+        
+        // Add timestamps
+        vals.created_at = new Date().toISOString();
+        vals.updated_at = new Date().toISOString();
+        
+        console.log('Adding container with data:', vals);
+        
+        const { error } = await supabaseClient.from('containers').insert([vals]);
+        if(error) {
+          console.error('Insert error:', error);
+          alert(error.message);
+        } else {
+          console.log('Container added successfully');
+          showMsg('✅ Added!', 'status');
+          loadFilterOptions().then(() => load());
+          addModal.classList.remove('show');
+          addModal.style.display='none';
+        }
+      };
+    }
+
+    // Track selected filter values per column
+    const columnFilters = {};
+
+    // Global click listener to close dropdowns (added once, not per renderHeader call)
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.multi-filter-dropdown.show').forEach(d => d.classList.remove('show'));
+    });
+
+    function renderHeader() {
+      theadEl.innerHTML = '<tr>' + allCols.map(c =>
+        `<th data-col="${c}"><div>${c}<span class="sort-indicator"></span></div><div class="multi-filter" data-col="${c}"><button class="multi-filter-btn" type="button">All <span class="arrow">▼</span></button><div class="multi-filter-dropdown"><input class="mf-search" type="text" placeholder="Search..."><div class="mf-options"></div><div class="mf-actions"><button class="mf-clear" type="button">Clear</button><button class="mf-all" type="button">Select All</button></div></div></div><div class="resizer"></div></th>`
+      ).join('') + '<th class="actions-header">Actions<div class="resizer"></div></th></tr>';
+
+      allCols.forEach(c => {
+        if (!columnFilters[c]) columnFilters[c] = new Set();
+        const th = theadEl.querySelector(`th[data-col="${c}"]`);
+        const mf = th.querySelector('.multi-filter');
+        const btn = mf.querySelector('.multi-filter-btn');
+        const dropdown = mf.querySelector('.multi-filter-dropdown');
+        const optionsDiv = mf.querySelector('.mf-options');
+        const searchInput = mf.querySelector('.mf-search');
+
+        // Get unique values from the full database (not just the current page)
+        const values = allFilterValues[c] || [];
+
+        // Render checkboxes
+        function renderOptions(filter = '') {
+          const term = filter.toLowerCase();
+          const filtered = term ? values.filter(v => {
+            const label = v === '__empty__' ? '(empty)' : String(v);
+            return label.toLowerCase().includes(term);
+          }) : values;
+          optionsDiv.innerHTML = filtered.map(v => {
+            const checked = columnFilters[c].has(String(v)) ? 'checked' : '';
+            const escaped = String(v).replace(/"/g, '&quot;');
+            const displayLabel = v === '__empty__' ? '<i style="color:#999">(empty)</i>' : String(v);
+            return `<label><input type="checkbox" value="${escaped}" ${checked}>${displayLabel}</label>`;
+          }).join('');
+
+          optionsDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.onchange = () => {
+              if (cb.checked) columnFilters[c].add(cb.value);
+              else columnFilters[c].delete(cb.value);
+              updateBtnLabel(c, btn);
+              filterSort();
+            };
+          });
+        }
+
+        renderOptions();
+
+        // Toggle dropdown
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          // Close other dropdowns
+          document.querySelectorAll('.multi-filter-dropdown.show').forEach(d => {
+            if (d !== dropdown) d.classList.remove('show');
+          });
+          dropdown.classList.toggle('show');
+          if (dropdown.classList.contains('show')) {
+            searchInput.value = '';
+            renderOptions();
+            searchInput.focus();
+          }
+        };
+
+        // Search within options
+        searchInput.oninput = () => renderOptions(searchInput.value);
+        searchInput.onclick = (e) => e.stopPropagation();
+
+        // Clear button
+        mf.querySelector('.mf-clear').onclick = (e) => {
+          e.stopPropagation();
+          columnFilters[c].clear();
+          updateBtnLabel(c, btn);
+          renderOptions(searchInput.value);
+          filterSort();
+        };
+
+        // Select All button
+        mf.querySelector('.mf-all').onclick = (e) => {
+          e.stopPropagation();
+          const term = searchInput.value.toLowerCase();
+          const filtered = term ? values.filter(v => String(v).toLowerCase().includes(term)) : values;
+          filtered.forEach(v => columnFilters[c].add(String(v)));
+          updateBtnLabel(c, btn);
+          renderOptions(searchInput.value);
+          filterSort();
+        };
+
+        // Restore button label from saved filters
+        updateBtnLabel(c, btn);
+      });
+
+      attachSort(); attachResizers(); attachDrag();
+    }
+
+    function updateBtnLabel(col, btn) {
+      const selected = columnFilters[col];
+      // Count unique values from the full database
+      const uniqueCount = (allFilterValues[col] || []).length;
+      const allSelected = selected.size >= uniqueCount && uniqueCount > 0;
+
+      if (selected.size === 0 || allSelected) {
+        // No filter or all selected = effectively no filter
+        btn.innerHTML = 'All <span class="arrow">▼</span>';
+        btn.classList.remove('active');
+      } else if (selected.size === 1) {
+        const val = [...selected][0];
+        const display = val === '__empty__' ? '(empty)' : (val.length > 15 ? val.slice(0, 15) + '...' : val);
+        btn.innerHTML = `${display} <span class="arrow">▼</span>`;
+        btn.classList.add('active');
+      } else {
+        btn.innerHTML = `${selected.size} selected <span class="arrow">▼</span>`;
+        btn.classList.add('active');
+      }
+    }
+
+    function applyQuickFilter(rows) {
+      if (currentFilter === 'all') return rows;
+      if (currentFilter === 'completed') return rows.filter(r => r.status === 'completed');
+      if (currentFilter === 'billing') return rows.filter(r => !r.Paid || r.Paid === '');
+      if (currentFilter === 'docs') return rows.filter(r => !r['EIR In'] || !r['EIR Out'] || !r['POD'] || r['EIR In'] === '' || r['EIR Out'] === '' || r['POD'] === '');
+      return rows;
+    }
+
+    function filterSort() {
+      let filtered = allData.filter(r => allCols.every(c => {
+        const selected = columnFilters[c];
+        if (!selected || selected.size === 0) return true;
+        const val = r[c];
+        // Handle empty/null values with __empty__ token
+        if (val == null || val === '') return selected.has('__empty__');
+        return selected.has(String(val));
+      }));
+      filtered = applyQuickFilter(filtered);
+      applySort(filtered);
+    }
+    function applySort(arr) {
+      // If no array passed (e.g. from column sort click), re-run filters first
+      if (!arr) { filterSort(); return; }
+      let d=[...arr]; if(sortConfig.key) {
+        d.sort((a,b)=> sortConfig.direction==='asc'
+          ? String(a[sortConfig.key]).localeCompare(b[sortConfig.key],undefined,{numeric:true})
+          : String(b[sortConfig.key]).localeCompare(a[sortConfig.key],undefined,{numeric:true})
+        );
+      }
+      displayedRowCount = d.length;
+      renderBody(d);
+      updatePagination();
+    }
+
+    function renderBody(rows) {
+      tbodyEl.innerHTML = rows.map(r=> '<tr data-container-id="'+r.id+'">' + allCols.map(c=> {
+        // Handle document link columns
+        if (['EIR In', 'EIR Out', 'POD'].includes(c)) {
+          if (r[c] && r[c].trim()) {
+            return `<td data-col="${c}"><button class="doc-link-btn" data-doc-url="${r[c]}" data-doc-type="${c}" data-container-id="${r.id}" title="Click to preview">📄</button></td>`;
+          } else {
+            return `<td data-col="${c}" contenteditable title="Click to add OneDrive link">${r[c]||''}</td>`;
+          }
+        }
+        return `<td data-col="${c}"${c!=='id'?' contenteditable':''}>${r[c]||''}</td>`;
+      }).join('') + '<td><button class="btn btn-delete" data-delete-id="'+r.id+'" title="Delete this container" aria-label="Delete container">🗑️</button></td></tr>').join('');
+
+
+      tbodyEl.querySelectorAll('td[contenteditable]').forEach(td=> td.onblur=async ()=>{
+        const col=td.dataset.col;
+        const id=td.closest('tr').querySelector('td[data-col="id"]').textContent;
+        const val=td.textContent.trim();
+        if(!val){ showMsg(`⚠ ${col} required`,'error'); return; }
+        const { error } = await supabaseClient.from('containers').update({[col]:val}).eq('id',id);
+        showMsg(error?error.message:`✅ Updated ${id}.${col}`,(error?'error':'status'));
+      });
+
+      // Show/hide empty state
+      const emptyState = document.getElementById('empty-state');
+      if (rows.length === 0) {
+        emptyState.style.display = 'flex';
+      } else {
+        emptyState.style.display = 'none';
+      }
+    }
+
+    // Event delegation for delete buttons and document links
+    tbodyEl.addEventListener('click', async (e) => {
+      if (e.target.closest('.btn-delete')) {
+        const deleteId = e.target.closest('.btn-delete').dataset.deleteId;
+        await deleteContainer(deleteId);
+      }
+      if (e.target.closest('.doc-link-btn')) {
+        const btn = e.target.closest('.doc-link-btn');
+        const url = btn.dataset.docUrl;
+        const docType = btn.dataset.docType;
+        const containerId = btn.dataset.containerId;
+        openDocumentPreview(url, docType, containerId);
+      }
+    });
+
+    // Event delegation for row double-click
+    tbodyEl.addEventListener('dblclick', (e) => {
+      const tr = e.target.closest('tr');
+      if (tr && !e.target.closest('.btn-delete')) {
+        const containerId = tr.dataset.containerId;
+        const container = allData.find(r => r.id == containerId);
+        if (container) openDetailsModal(container);
+      }
+    });
+
+    function attachSort() {
+      theadEl.querySelectorAll('th > div').forEach(div=>{
+        div.style.cursor='pointer'; const col=div.parentElement.dataset.col;
+        div.onclick = ()=>{
+          if(sortConfig.key===col) sortConfig.direction=sortConfig.direction==='asc'?'desc':'asc';
+          else sortConfig={key:col,direction:'asc'};
+          theadEl.querySelectorAll('.sort-indicator').forEach(si=>si.textContent='');
+          div.querySelector('.sort-indicator').textContent=sortConfig.direction==='asc'?'▲':'▼'; applySort();
+        };
+      });
+    }
+
+    function attachResizers() {
+      theadEl.querySelectorAll('th').forEach(th=>{
+        const r=th.querySelector('.resizer');
+        if (!r) return; // Skip if no resizer found
+        let startX,startW;
+        r.onmousedown = e=>{ e.preventDefault(); startX=e.clientX; startW=th.offsetWidth;
+          document.addEventListener('mousemove',move); document.addEventListener('mouseup',up);
+        };
+        function move(e){ th.style.width = startW + (e.clientX - startX) + 'px'; }
+        function up(){ document.removeEventListener('mousemove',move); document.removeEventListener('mouseup',up); }
+      });
+    }
+
+    function attachDrag() {
+      const ths = Array.from(theadEl.querySelectorAll('th'));
+      ths.forEach((th,i)=>{
+        th.draggable=true; th.ondragstart=()=>dragSrc=i;
+        th.ondragover=e=>{ e.preventDefault(); th.classList.add('drag-over'); };
+        th.ondragleave=()=>th.classList.remove('drag-over');
+        th.ondrop=()=>{
+          th.classList.remove('drag-over'); const to = ths.indexOf(th);
+          if(dragSrc!==null && dragSrc!==to){ const c = allCols.splice(dragSrc,1)[0]; allCols.splice(to,0,c);
+            renderHeader(); applySort(); document.getElementById('apply-columns').click();
+          }
+        };
+      });
+    }
+
+    function showMsg(txt,cls){ msgEl.textContent=txt; msgEl.className=cls; setTimeout(()=>msgEl.textContent='',3000); }
+
+    // Delete container function
+    window.deleteContainer = async function(containerId) {
+      const container = allData.find(r => r.id == containerId);
+      const containerName = container?.container_number || `ID ${containerId}`;
+
+      if (!confirm(`Are you sure you want to delete container "${containerName}"?\n\nThis action cannot be undone.`)) {
+        return;
+      }
+
+      console.log('Deleting container with ID:', containerId);
+
+      const { error } = await supabaseClient.from('containers').delete().eq('id', containerId);
+
+      if (error) {
+        console.error('Delete error:', error);
+        showMsg(`❌ Error deleting container: ${error.message}`, 'error');
+      } else {
+        console.log('Container deleted successfully');
+        showMsg(`✅ Container "${containerName}" deleted successfully`, 'status');
+        // Reload filter options and data
+        loadFilterOptions().then(() => load());
+      }
+    };
+
+    // Open container details modal
+    let currentContainer = null;
+    function openDetailsModal(container) {
+      currentContainer = { ...container }; // Store a copy for editing
+      const title = document.getElementById('details-title');
+      const status = document.getElementById('details-status');
+      const content = document.getElementById('details-content');
+
+      title.textContent = `Container: ${container.container_number || 'N/A'}`;
+      status.textContent = `Status: ${container.status || 'Unknown'}`;
+
+      // Build the grid of editable fields
+      content.innerHTML = '';
+      allCols.forEach(col => {
+        const card = document.createElement('div');
+        card.className = 'detail-card';
+
+        const label = document.createElement('label');
+        label.textContent = col.replace(/_/g, ' ');
+
+        const input = document.createElement('input');
+        input.type = col.toLowerCase().includes('date') || col.toLowerCase().includes('time') ? 'datetime-local' : 'text';
+        input.value = container[col] || '';
+        input.dataset.field = col;
+
+        // Special handling for date/timestamp fields
+        if (container[col] && (col.toLowerCase().includes('date') || col.toLowerCase().includes('appointment'))) {
+          const date = new Date(container[col]);
+          if (!isNaN(date)) {
+            input.value = date.toISOString().slice(0, 16);
+          }
+        }
+
+        // Disable ID field
+        if (col === 'id' || col === 'created_at') {
+          input.disabled = true;
+          input.style.background = '#f0f0f0';
+        }
+
+        card.appendChild(label);
+        card.appendChild(input);
+        content.appendChild(card);
+      });
+
+      detailsModal.classList.add('show');
+      detailsModal.style.display = 'flex';
+    }
+
+    // Save container details
+    document.getElementById('save-details').onclick = async () => {
+      const inputs = document.querySelectorAll('#details-content input');
+      const updates = {};
+
+      inputs.forEach(input => {
+        const field = input.dataset.field;
+        if (!input.disabled) {
+          updates[field] = input.value || null;
+        }
+      });
+
+      updates.updated_at = new Date().toISOString();
+
+      console.log('Updating container:', currentContainer.id, updates);
+
+      const { error } = await supabaseClient
+        .from('containers')
+        .update(updates)
+        .eq('id', currentContainer.id);
+
+      if (error) {
+        console.error('Update error:', error);
+        showMsg(`❌ Error updating container: ${error.message}`, 'error');
+      } else {
+        console.log('Container updated successfully');
+        showMsg('✅ Container updated successfully!', 'status');
+        detailsModal.classList.remove('show');
+        detailsModal.style.display = 'none';
+        loadFilterOptions().then(() => load()); // Refresh filter options and table
+      }
+    };
+
+    // Document Preview & Share Functions
+    let currentDocumentContext = null;
+
+    function convertToEmbedUrl(url) {
+      // Handle various OneDrive/SharePoint link formats
+      if (!url) return url;
+
+      console.log('Converting URL to embed format:', url);
+
+      // OneDrive 1drv.ms sharing links
+      if (url.includes('1drv.ms')) {
+        // Add em=2 parameter for embed view
+        let embedUrl = url.includes('?') ? url + '&em=2' : url + '?em=2';
+        console.log('Converted 1drv.ms URL:', embedUrl);
+        return embedUrl;
+      }
+
+      // OneDrive.live.com links
+      if (url.includes('onedrive.live.com')) {
+        // Add embed parameter
+        let embedUrl = url.includes('?') ? url + '&embed=1' : url + '?embed=1';
+        console.log('Converted onedrive.live.com URL:', embedUrl);
+        return embedUrl;
+      }
+
+      // SharePoint document links (*.sharepoint.com)
+      if (url.includes('sharepoint.com')) {
+        console.log('Detected SharePoint URL');
+
+        // Handle onedrive.aspx navigation URLs - convert to Doc.aspx with embedview
+        if (url.includes('onedrive.aspx')) {
+          console.log('Converting onedrive.aspx to Doc.aspx format');
+          let embedUrl = url.replace('onedrive.aspx', 'Doc.aspx');
+          embedUrl = embedUrl.includes('&action=') ? embedUrl : (embedUrl + '&action=embedview');
+          console.log('Converted OneDrive navigation URL:', embedUrl);
+          return embedUrl;
+        }
+
+        // For Doc.aspx or sourcedoc format
+        if (url.includes('_layouts/15/Doc.aspx') || url.includes('sourcedoc=')) {
+          // Add embedview action if not present
+          let embedUrl = url.includes('&action=') ? url : (url + '&action=embedview');
+          console.log('Converted SharePoint Doc URL:', embedUrl);
+          return embedUrl;
+        }
+
+        // If it's a sharing link, try adding action=embedview
+        let embedUrl = url.includes('?') ? url + '&action=embedview' : url + '?action=embedview';
+        console.log('Converted SharePoint sharing URL:', embedUrl);
+        return embedUrl;
+      }
+
+      // For other URLs, return as-is (might be direct embed links or other document services)
+      console.log('Using URL as-is:', url);
+      return url;
+    }
+
+    window.openDocumentPreview = function(url, docType, containerId) {
+      if (!url || !url.trim()) {
+        showMsg('❌ No document link available', 'error');
+        return;
+      }
+
+      const container = allData.find(r => r.id == containerId);
+      if (!container) {
+        showMsg('❌ Container not found', 'error');
+        return;
+      }
+
+      currentDocumentContext = {
+        url: url,
+        docType: docType,
+        container: container
+      };
+
+      const embedUrl = convertToEmbedUrl(url);
+      const title = `Container ${container.container_number || 'N/A'} - ${docType}`;
+
+      console.log('Opening document preview:', { url, embedUrl, docType, containerId });
+
+      document.getElementById('doc-preview-title').textContent = title;
+      const iframe = document.getElementById('doc-preview-frame');
+      const spinner = document.getElementById('doc-loading-spinner');
+      const hint = document.getElementById('doc-preview-hint');
+
+      // Show loading state
+      iframe.style.display = 'none';
+      spinner.parentElement.style.display = 'flex';
+      hint.style.display = 'none';
+
+      // Handle iframe load
+      iframe.onload = () => {
+        console.log('Document loaded successfully');
+        spinner.parentElement.style.display = 'none';
+        iframe.style.display = 'block';
+        showMsg('✅ Document loaded', 'status');
+      };
+
+      // Handle iframe errors
+      iframe.onerror = () => {
+        console.error('Failed to load document in iframe');
+        spinner.parentElement.style.display = 'none';
+        hint.innerHTML = '⚠️ <strong>Preview not available.</strong> SharePoint documents may need specific permissions to embed. Use "Open in New Tab" to view, or get the embed code from SharePoint\'s "Embed" option.';
+        hint.style.display = 'block';
+        showMsg('⚠️ Could not load preview', 'error');
+      };
+
+      // Timeout fallback - if document doesn't load after 5 seconds
+      const timeoutId = setTimeout(() => {
+        if (iframe.style.display === 'none') {
+          console.warn('Document preview timed out');
+          spinner.parentElement.style.display = 'none';
+          hint.innerHTML = '⏱️ <strong>Document is taking too long to load.</strong> Use "Open in New Tab" to view the document.';
+          hint.style.display = 'block';
+        }
+      }, 5000);
+
+      iframe.onload = () => {
+        clearTimeout(timeoutId);
+        spinner.parentElement.style.display = 'none';
+        iframe.style.display = 'block';
+        showMsg('✅ Document loaded', 'status');
+      };
+
+      iframe.src = embedUrl;
+
+      docPreviewModal.classList.add('show');
+      docPreviewModal.style.display = 'flex';
+    };
+
+    window.shareDocumentViaEmail = function() {
+      if (!currentDocumentContext) {
+        showMsg('❌ No document context', 'error');
+        return;
+      }
+
+      const { url, docType, container } = currentDocumentContext;
+      const subject = `${docType} for Container ${container.container_number || 'N/A'}`;
+
+      const emailBody = `
+Document: ${docType}
+Container: ${container.container_number || 'N/A'}
+Status: ${container.status || 'N/A'}
+Customer: ${container.customer || 'N/A'}
+Location: ${container.location || 'N/A'}
+
+View/Download Document:
+${url}
+      `.trim();
+
+      const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+      window.location.href = mailtoLink;
+    };
+
+    window.downloadDocument = function() {
+      if (!currentDocumentContext) {
+        showMsg('❌ No document context', 'error');
+        return;
+      }
+
+      const { url } = currentDocumentContext;
+      // Append download parameter to OneDrive links
+      let downloadUrl = url;
+      if (url.includes('1drv.ms') || url.includes('onedrive.live.com')) {
+        downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=1';
+      }
+      window.open(downloadUrl, '_blank');
+    };
+
+    window.openDocumentInNewTab = function() {
+      if (!currentDocumentContext) {
+        showMsg('❌ No document context', 'error');
+        return;
+      }
+
+      const { url } = currentDocumentContext;
+      window.open(url, '_blank');
+    };
+
+    // Hook up document preview modal buttons
+    document.getElementById('doc-open-tab').onclick = openDocumentInNewTab;
+    document.getElementById('doc-share-email').onclick = shareDocumentViaEmail;
+    document.getElementById('doc-download').onclick = downloadDocument;
+
+    // Font size selector
+const fontSizeSelect = document.getElementById('font-size-select');
+fontSizeSelect.onchange = e => {
+  // apply font size only to table
+  const wrapper = document.querySelector('.table-wrapper');
+  wrapper.style.fontSize = e.target.value;
+  // reset table layout for dynamic resizing
+  const table = document.getElementById('containers-table');
+  table.style.tableLayout = 'auto';
+  table.querySelectorAll('th').forEach(th => th.style.width = 'auto');
+};
+
+// Initialize — load filter options from full database first, then load paginated data
+loadFilterOptions().then(() => load());
+  </script>
+  <script src="/sidebar.js"></script>
+  <script src="/chat-widget.js"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log
+
+# Environment
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# Local data (absolute paths)
+/data/
+/mnt/
+/dev/
+/prod/
+/lost+found/
+
+# Saved pages and HTML docs
+appointments/apm/saved_pages/
+api/apm/docs/saved_pages/
+api/apm/docs/*.*
+
+# PDF and docs we don't track
+*.pdf
+*.docx
+*.eml
+
+# Login debug files
+*login*
+*debug*
+*result*
+
+# Confidential
+api/apm/docs/bruno-format*
+api/apm/docs/postman-format*
+api/lbct/docs/*

@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Appointments – Calendar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+  <style>
+    :root {
+      --sidebar-width: 240px;
+      --sidebar-collapsed: 60px;
+      --primary-color: #1f6feb;
+      --primary-hover: #1854d4;
+      --accent-color: #0969da;
+      --success-color: #1a7f37;
+      --error-color: #cf222e;
+      --bg-light: #f6f8fa;
+      --bg-lighter: #ffffff;
+      --text-dark: #0d1117;
+      --text-muted: #57606a;
+      --border-color: #d0d7de;
+      --modal-overlay: rgba(13, 17, 23, 0.65);
+      --color-pickup: #0052cc;
+      --color-delivery: #10b981;
+      --color-other: #6b778c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #layout { height: 100%; }
+    body { font-family: 'Source Sans 3', sans-serif; background: var(--bg-light); color: var(--text-dark); overflow: hidden; font-size: 14px; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', sans-serif; font-weight: 600; }
+
+    /* Layout */
+    .layout { display: flex; height: 100%; transition: margin-left .3s; }
+
+    /* Content */
+    .content {
+      margin-left: var(--sidebar-width); padding: 2rem;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      transition: margin-left .3s ease;
+    }
+    .layout.collapsed .content { margin-left: var(--sidebar-collapsed); }
+    .content h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--text-dark); }
+
+    /* Calendar container */
+    .calendar-container {
+      flex: 1;
+      background: var(--bg-lighter);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.08);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Calendar + Panel wrapper */
+    .calendar-with-panel {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      gap: 0;
+      position: relative;
+    }
+
+    /* Container Side Panel */
+    .container-panel {
+      width: 300px;
+      min-width: 300px;
+      background: var(--bg-lighter);
+      border-right: 1px solid var(--border-color);
+      border-radius: 12px 0 0 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width 0.3s ease, min-width 0.3s ease;
+      box-shadow: 1px 0 3px rgba(0,0,0,0.05);
+    }
+    .container-panel.collapsed {
+      width: 0;
+      min-width: 0;
+      border-right: none;
+    }
+    .container-panel.collapsed .panel-header h3,
+    .container-panel.collapsed .panel-search,
+    .container-panel.collapsed .panel-content {
+      display: none;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-light);
+    }
+    .panel-header h3 {
+      font-size: 0.95rem;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .panel-toggle-btn {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .panel-toggle-btn:hover {
+      background: var(--bg-light);
+      color: var(--text-dark);
+    }
+
+    .panel-search {
+      margin: 0.5rem 0.75rem;
+      padding: 0.45rem 0.65rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: inherit;
+    }
+    .panel-search:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(31,111,235,0.1);
+    }
+
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 0.75rem 0.75rem;
+    }
+
+    /* Group sections */
+    .panel-group { margin-bottom: 0.75rem; }
+    .panel-group-header {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 0.5rem 0 0.25rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 0.4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .panel-group-count {
+      background: var(--bg-light);
+      border-radius: 10px;
+      padding: 0.1rem 0.45rem;
+      font-size: 0.65rem;
+    }
+
+    /* Container cards */
+    .container-card {
+      background: var(--bg-light);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.5rem 0.65rem;
+      margin-bottom: 0.35rem;
+      cursor: grab;
+      transition: all 0.2s ease;
+      font-size: 0.78rem;
+    }
+    .container-card:hover {
+      border-color: var(--accent-color);
+      box-shadow: 0 2px 8px rgba(31,111,235,0.12);
+      transform: translateY(-1px);
+    }
+    .container-card:active { cursor: grabbing; }
+    .container-card.scheduled {
+      opacity: 0.45;
+      cursor: default;
+      border-left: 3px solid var(--success-color);
+    }
+    .container-card.scheduled:hover {
+      border-color: var(--border-color);
+      border-left-color: var(--success-color);
+      box-shadow: none;
+      transform: none;
+    }
+    .card-number {
+      font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      color: var(--text-dark);
+      margin-bottom: 0.15rem;
+    }
+    .card-detail {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+    .card-status {
+      display: inline-block;
+      font-size: 0.65rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      margin-top: 0.2rem;
+      font-weight: 500;
+    }
+    .card-status.pickup-group { background: rgba(0,82,204,0.1); color: var(--color-pickup); }
+    .card-status.delivery-group { background: rgba(16,185,129,0.1); color: var(--color-delivery); }
+    .card-status.return-group { background: rgba(107,119,140,0.1); color: var(--color-other); }
+
+    /* Expand button when collapsed */
+    .panel-expand-float {
+      display: none;
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      background: var(--bg-lighter);
+      border: 1px solid var(--border-color);
+      border-left: none;
+      border-radius: 0 6px 6px 0;
+      padding: 0.5rem 0.3rem;
+      cursor: pointer;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .panel-expand-float:hover { color: var(--text-dark); background: var(--bg-light); }
+
+    /* FullCalendar customization */
+    .fc {
+      font-family: 'Source Sans 3', sans-serif;
+      height: 100%;
+    }
+    .fc .fc-button-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+    .fc .fc-button-primary:hover,
+    .fc .fc-button-primary:not(:disabled).fc-button-active {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+    .fc .fc-button-primary:disabled {
+      background-color: #ccc;
+      border-color: #ccc;
+    }
+    .fc .fc-col-header-cell {
+      background-color: var(--bg-light);
+      padding: 1rem .5rem !important;
+      font-weight: 600;
+    }
+    .fc .fc-daygrid-day {
+      padding: 0.5rem;
+    }
+    .fc .fc-daygrid-day-frame {
+      min-height: 120px;
+    }
+    .fc .fc-event {
+      border: none !important;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .fc .fc-event-title {
+      padding: 0.25rem 0.5rem;
+      font-weight: 500;
+    }
+    .fc .fc-daygrid-event-dot {
+      display: none;
+    }
+
+    /* Modals */
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--modal-overlay); justify-content: center; align-items: center; z-index: 2000;
+      animation: fadeIn .2s ease-out;
+    }
+    .modal.show { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-content {
+      background: var(--bg-lighter); width: 520px; max-height: 80vh; padding: 1.5rem;
+      border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+      overflow-y: auto; position: relative;
+      animation: slideUp .3s ease-out;
+    }
+    .modal-close { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; transition: color .2s; }
+    .modal-close:hover { color: var(--text-dark); }
+    h2 { margin-bottom: 1.5rem; }
+    form.grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1.5rem; margin-top: 1rem; }
+    form.grid.full { grid-template-columns: 1fr; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { margin-bottom: .5rem; font-size: .85rem; font-weight: 500; color: var(--text-dark); }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: .6rem; border: 1px solid var(--border-color); border-radius: 6px;
+      font-family: inherit; font-size: .95rem; transition: border-color .2s, box-shadow .2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none; border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.1);
+    }
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    /* Buttons */
+    .modal-actions {
+      display: flex; gap: 1rem; justify-content: flex-end;
+      padding-top: 1.5rem; border-top: 2px solid var(--border-color);
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .6rem 1.2rem; border: none; border-radius: 8px;
+      font-size: .95rem; font-weight: 500; cursor: pointer; font-family: 'Poppins', sans-serif;
+      transition: all .2s ease;
+    }
+    .btn-primary { background: var(--primary-color); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3); }
+    .btn-success { background: var(--success-color); color: #fff; }
+    .btn-success:hover { background: #158631; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(26, 127, 55, 0.3); }
+    .btn-secondary { background: #6c757d; color: #fff; }
+    .btn-secondary:hover { background: #5a6268; }
+    .btn-danger { background: var(--error-color); color: #fff; }
+    .btn-danger:hover { background: #da3633; }
+
+    /* Status message */
+    .status { margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 6px; font-weight: 500; }
+    .status.success { background: #dcfce7; color: #166534; }
+    .status.error { background: #fee2e2; color: #991b1b; }
+
+    /* Type badges */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .badge-pickup { background: rgba(0, 82, 204, 0.1); color: var(--color-pickup); }
+    .badge-delivery { background: rgba(16, 185, 129, 0.1); color: var(--color-delivery); }
+    .badge-other { background: rgba(107, 119, 140, 0.1); color: var(--color-other); }
+
+    /* Controls */
+    .controls {
+      padding: 1rem 1.5rem;
+      background: var(--bg-light);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .controls label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      color: var(--text-dark);
+    }
+    .controls input[type="checkbox"] {
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .layout { margin-left: 0; }
+      .content { margin-left: 0; padding: 1rem; }
+      .content h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+      .modal-content { width: 90vw; max-width: 100%; padding: 1.25rem; }
+      form.grid { grid-template-columns: 1fr; }
+      .fc .fc-daygrid-day-frame { min-height: 80px; }
+      .container-panel { display: none; }
+      .panel-expand-float { display: none !important; }
+      .calendar-with-panel { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div id="layout" class="layout">
+    <main class="content">
+      <h1>📅 Appointments Calendar</h1>
+
+      <div class="calendar-with-panel">
+        <!-- Container Side Panel -->
+        <aside id="container-panel" class="container-panel">
+          <div class="panel-header">
+            <h3>Containers</h3>
+            <button id="panel-toggle" class="panel-toggle-btn" title="Collapse panel">&#9664;</button>
+          </div>
+          <input type="text" id="panel-search" class="panel-search" placeholder="Search containers..." />
+          <div id="panel-content" class="panel-content">
+            <div style="text-align:center;padding:2rem;color:var(--text-muted);">Loading...</div>
+          </div>
+        </aside>
+
+        <!-- Expand button (visible when panel collapsed) -->
+        <button id="panel-expand" class="panel-expand-float" title="Show containers">&#9654;</button>
+
+        <!-- Calendar -->
+        <div class="calendar-container">
+          <div class="controls">
+            <button id="add-btn" class="btn btn-success">➕ New Appointment</button>
+            <label style="margin-left: auto;">
+              <input type="checkbox" id="filter-my-driver" />
+              My Appointments
+            </label>
+          </div>
+          <div id="calendar"></div>
+        </div>
+      </div>
+
+      <div id="message" class="status" style="display: none; margin-top: 1rem;"></div>
+    </main>
+  </div>
+
+  <!-- New/Edit Appointment Modal -->
+  <div id="appointment-modal" class="modal">
+    <div class="modal-content">
+      <span id="close-modal" class="modal-close">×</span>
+      <h2 id="modal-title">New Appointment</h2>
+      <form id="appointment-form" class="grid full">
+        <div class="form-group">
+          <label for="apt-title">Title *</label>
+          <input type="text" id="apt-title" name="title" placeholder="e.g., Container Pickup" required />
+        </div>
+        <div class="form-group">
+          <label for="apt-type">Type</label>
+          <select id="apt-type" name="appointment_type">
+            <option value="">-- Select --</option>
+            <option value="pickup">Pickup</option>
+            <option value="delivery">Delivery</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="apt-start">Start Time *</label>
+          <input type="datetime-local" id="apt-start" name="start_time" required />
+        </div>
+        <div class="form-group">
+          <label for="apt-end">End Time *</label>
+          <input type="datetime-local" id="apt-end" name="end_time" required />
+        </div>
+        <div class="form-group">
+          <label for="apt-driver">Driver Name</label>
+          <input type="text" id="apt-driver" name="driver_name" placeholder="e.g., John Smith" />
+        </div>
+        <div class="form-group">
+          <label for="apt-container">Container ID</label>
+          <input type="text" id="apt-container" name="container_id" placeholder="Container ID" />
+        </div>
+        <div class="form-group">
+          <label for="apt-location">Location</label>
+          <input type="text" id="apt-location" name="location" placeholder="e.g., Port Terminal A" />
+        </div>
+        <div class="form-group">
+          <label for="apt-status">Status</label>
+          <select id="apt-status" name="status">
+            <option value="scheduled">Scheduled</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label for="apt-notes">Notes</label>
+          <textarea id="apt-notes" name="notes" placeholder="Additional information..."></textarea>
+        </div>
+      </form>
+      <div class="modal-actions">
+        <button id="cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button id="delete-btn" class="btn btn-danger" style="display: none; margin-right: auto;">Delete</button>
+        <button id="save-btn" class="btn btn-success">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+  <script>
+    // Supabase init
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(
+      'https://bsaffwfvnnyaihmrmqwt.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzYWZmd2Z2bm55YWlobXJtcXd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNDk1NzksImV4cCI6MjA3MzcyNTU3OX0.RyyuoUS8bcf-a18SWExPZurd8mbX4XLOITiSAARV7sI'
+    );
+
+    // Modal controls
+    const modal = document.getElementById('appointment-modal');
+    const closeModal = document.getElementById('close-modal');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const addBtn = document.getElementById('add-btn');
+    const saveBtn = document.getElementById('save-btn');
+    const deleteBtn = document.getElementById('delete-btn');
+
+    closeModal.onclick = cancelBtn.onclick = () => modal.close();
+    addBtn.onclick = () => openNewAppointmentModal();
+    saveBtn.onclick = () => saveAppointment();
+    deleteBtn.onclick = () => deleteAppointment();
+
+    // Message display
+    function showMessage(msg, type = 'success') {
+      const msgEl = document.getElementById('message');
+      msgEl.textContent = msg;
+      msgEl.className = `status ${type}`;
+      msgEl.style.display = 'block';
+      setTimeout(() => msgEl.style.display = 'none', 3000);
+    }
+
+    // Appointment state
+    let currentAppointment = null;
+    const typeColors = {
+      'pickup': '#0052cc',
+      'delivery': '#10b981',
+      'other': '#6b778c',
+      '': '#6b778c'
+    };
+
+    // ── Container Panel ──────────────────────────────────────
+    const STATUS_GROUPS = {
+      'empty':         'empty_return',
+      'delivered':     'pending_delivery',
+      'pre-pulled':    'pending_delivery',
+      'available':     'needs_appointment',
+      'not available': 'needs_appointment',
+      'on vessel':     'on_vessel'
+    };
+
+    const GROUP_META = {
+      empty_return:      { label: 'Empty / Return to Port',  cssClass: 'return-group',   appointmentType: 'other' },
+      pending_delivery:  { label: 'Pending Delivery',         cssClass: 'delivery-group', appointmentType: 'delivery' },
+      needs_appointment: { label: 'Available / Needs Appt',   cssClass: 'pickup-group',   appointmentType: 'pickup' },
+      on_vessel:         { label: 'On Vessel',                 cssClass: 'pickup-group',   appointmentType: 'pickup' }
+    };
+
+    let panelContainers = [];
+    let scheduledContainerCounts = new Map();
+    let draggableInstance = null;
+
+    async function loadContainerPanel() {
+      try {
+        // Fetch non-terminated containers
+        const { data: containers, error: cErr } = await supabaseClient
+          .from('containers')
+          .select('*')
+          .neq('status', 'terminated');
+
+        if (cErr) { console.error('Container query error:', cErr); return; }
+
+        // Fetch appointment container_ids to know which are already scheduled
+        try {
+          const { data: appointments, error: aErr } = await supabaseClient
+            .from('appointments')
+            .select('container_id')
+            .not('container_id', 'is', null)
+            .neq('status', 'cancelled');
+
+          if (!aErr && appointments) {
+            scheduledContainerCounts = new Map();
+            appointments.forEach(a => {
+              if (a.container_id) {
+                scheduledContainerCounts.set(a.container_id,
+                  (scheduledContainerCounts.get(a.container_id) || 0) + 1);
+              }
+            });
+          } else {
+            console.warn('Appointments query issue (table may not exist yet):', aErr);
+            scheduledContainerCounts = new Map();
+          }
+        } catch (aptErr) {
+          console.warn('Could not fetch appointments:', aptErr);
+          scheduledContainerCounts = new Map();
+        }
+
+        panelContainers = containers || [];
+        renderContainerPanel(panelContainers);
+      } catch (err) {
+        console.error('Error loading container panel:', err);
+      }
+    }
+
+    function renderContainerPanel(containers, searchFilter = '') {
+      const panelContent = document.getElementById('panel-content');
+
+      let filtered = containers;
+      if (searchFilter) {
+        const term = searchFilter.toLowerCase();
+        filtered = containers.filter(c =>
+          (c.container_number || '').toLowerCase().includes(term) ||
+          (c.Company || '').toLowerCase().includes(term) ||
+          (c.customer || '').toLowerCase().includes(term) ||
+          (c.Terminal || '').toLowerCase().includes(term)
+        );
+      }
+
+      // Group containers (order: empty, pending delivery, available, on vessel)
+      const groups = { empty_return: [], pending_delivery: [], needs_appointment: [], on_vessel: [] };
+      filtered.forEach(c => {
+        const group = STATUS_GROUPS[(c.status || '').toLowerCase()];
+        if (group) groups[group].push(c);
+      });
+
+      let html = '';
+      for (const [groupKey, groupContainers] of Object.entries(groups)) {
+        const meta = GROUP_META[groupKey];
+        html += `<div class="panel-group">`;
+        html += `<div class="panel-group-header">
+          ${meta.label}
+          <span class="panel-group-count">${groupContainers.length}</span>
+        </div>`;
+
+        if (groupContainers.length === 0) {
+          html += `<div style="padding:0.4rem 0;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No containers</div>`;
+        }
+
+        groupContainers.forEach(c => {
+          const aptCount = scheduledContainerCounts.get(c.id) ||
+                           scheduledContainerCounts.get(c.container_number) || 0;
+
+          html += `<div class="container-card"
+            data-container-id="${c.id || ''}"
+            data-container-number="${c.container_number || ''}"
+            data-company="${c.Company || ''}"
+            data-status="${c.status || ''}"
+            data-terminal="${c.Terminal || ''}"
+            data-customer="${c.customer || ''}"
+            data-lfd="${c.LFD || ''}"
+            data-group="${groupKey}"
+            data-appointment-type="${meta.appointmentType}">
+            <div class="card-number">${c.container_number || 'N/A'}${aptCount > 0 ? ` <span style="font-size:0.65rem;color:var(--success-color);">(${aptCount} appt${aptCount > 1 ? 's' : ''})</span>` : ''}</div>
+            <div class="card-detail">${[c.Company, c.customer].filter(Boolean).join(' | ')}</div>
+            ${c.Terminal ? `<div class="card-detail">Terminal: ${c.Terminal}</div>` : ''}
+            <span class="card-status ${meta.cssClass}">${c.status || ''}</span>
+            ${c.LFD ? `<div class="card-detail">LFD: ${c.LFD}</div>` : ''}
+          </div>`;
+        });
+
+        html += `</div>`;
+      }
+
+      if (filtered.length === 0) {
+        html = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">No containers found</div>';
+      }
+
+      panelContent.innerHTML = html;
+      initExternalDrag();
+    }
+
+    function initExternalDrag() {
+      if (draggableInstance) {
+        draggableInstance.destroy();
+      }
+
+      const panelContent = document.getElementById('panel-content');
+      if (!panelContent || typeof FullCalendar.Draggable === 'undefined') return;
+
+      draggableInstance = new FullCalendar.Draggable(panelContent, {
+        itemSelector: '.container-card',
+        eventData: function(eventEl) {
+          return {
+            title: eventEl.dataset.containerNumber || 'Container',
+            duration: '01:00',
+            extendedProps: {
+              container_id: eventEl.dataset.containerId,
+              container_number: eventEl.dataset.containerNumber,
+              company: eventEl.dataset.company,
+              status: eventEl.dataset.status,
+              terminal: eventEl.dataset.terminal,
+              customer: eventEl.dataset.customer,
+              group: eventEl.dataset.group,
+              appointment_type: eventEl.dataset.appointmentType,
+              fromExternalDrag: true
+            }
+          };
+        }
+      });
+    }
+
+    // Panel toggle
+    document.getElementById('panel-toggle').onclick = () => {
+      const panel = document.getElementById('container-panel');
+      const btn = document.getElementById('panel-toggle');
+      const expandBtn = document.getElementById('panel-expand');
+      panel.classList.add('collapsed');
+      expandBtn.style.display = 'block';
+    };
+    document.getElementById('panel-expand').onclick = () => {
+      const panel = document.getElementById('container-panel');
+      const expandBtn = document.getElementById('panel-expand');
+      panel.classList.remove('collapsed');
+      expandBtn.style.display = 'none';
+    };
+
+    // Panel search
+    document.getElementById('panel-search').oninput = (e) => {
+      renderContainerPanel(panelContainers, e.target.value.trim());
+    };
+
+    // ── Time helpers ──────────────────────────────────────
+    // Convert a Date to "YYYY-MM-DDTHH:MM" in local time (for datetime-local inputs)
+    function toLocalInput(d) {
+      const off = d.getTimezoneOffset();
+      const local = new Date(d.getTime() - off * 60000);
+      return local.toISOString().slice(0, 16);
+    }
+
+    // Convert a datetime-local string to full ISO with UTC (for saving to API/Supabase)
+    function toUTCISO(dateTimeLocalStr) {
+      return new Date(dateTimeLocalStr).toISOString();
+    }
+
+    // Helper: Close modal
+    Element.prototype.close = function() {
+      this.classList.remove('show');
+      this.style.display = 'none';
+      currentAppointment = null;
+    };
+
+    // Helper: Open modal
+    Element.prototype.open = function() {
+      this.classList.add('show');
+      this.style.display = 'flex';
+    };
+
+    // Calendar instance
+    let calendar;
+
+    async function initCalendar() {
+      const calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        timeZone: 'local',
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        height: 'auto',
+        contentHeight: 'auto',
+        events: async (info, successCallback, failureCallback) => {
+          try {
+            const response = await fetch('/api/appointments');
+            const data = await response.json();
+            successCallback(data.events || []);
+          } catch (error) {
+            console.error('Error loading appointments:', error);
+            failureCallback(error);
+          }
+        },
+        editable: true,
+        eventClick: (info) => openEditAppointmentModal(info.event),
+        dateClick: (info) => openNewAppointmentModalWithDate(info.dateStr),
+        eventDrop: async (info) => {
+          // Update appointment when dragged
+          const apt = info.event;
+          try {
+            const startTime = apt.start.toISOString();
+            const endTime = apt.end?.toISOString() || startTime;
+            const response = await fetch(`/api/appointments/${apt.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                start_time: startTime,
+                end_time: endTime
+              })
+            });
+            if (response.ok) {
+              showMessage('✅ Appointment updated', 'success');
+            } else {
+              showMessage('❌ Failed to update appointment', 'error');
+              info.revert();
+            }
+          } catch (error) {
+            console.error('Error updating appointment:', error);
+            showMessage('❌ Error updating appointment', 'error');
+            info.revert();
+          }
+        },
+        droppable: true,
+        eventReceive: (info) => {
+          const ext = info.event.extendedProps;
+
+          // Only handle external container drops
+          if (!ext.fromExternalDrag) return;
+
+          // Capture times BEFORE removing the temporary event
+          const start = info.event.start || new Date();
+          const end = info.event.end || new Date(start.getTime() + 60 * 60 * 1000);
+
+          // Remove the temporary event — modal save will create the real one
+          info.event.remove();
+
+          // Open modal pre-filled with container data
+          currentAppointment = null;
+          document.getElementById('modal-title').textContent = 'Schedule Container';
+          document.getElementById('appointment-form').reset();
+          deleteBtn.style.display = 'none';
+
+          // Auto-populate fields
+          document.getElementById('apt-title').value = ext.container_number || '';
+          document.getElementById('apt-type').value = ext.appointment_type || 'other';
+          document.getElementById('apt-container').value = ext.container_id || '';
+          document.getElementById('apt-location').value = ext.terminal || '';
+
+          // Set times from drop position (local time for display in input)
+          document.getElementById('apt-start').value = toLocalInput(start);
+          document.getElementById('apt-end').value = toLocalInput(end);
+
+          // Add context in notes
+          const notes = [];
+          if (ext.company) notes.push(`Company: ${ext.company}`);
+          if (ext.customer) notes.push(`Customer: ${ext.customer}`);
+          if (ext.status) notes.push(`Container Status: ${ext.status}`);
+          document.getElementById('apt-notes').value = notes.join('\n');
+
+          modal.open();
+        }
+      });
+
+      calendar.render();
+    }
+
+    function openNewAppointmentModal() {
+      currentAppointment = null;
+      document.getElementById('modal-title').textContent = 'New Appointment';
+      document.getElementById('appointment-form').reset();
+      deleteBtn.style.display = 'none';
+
+      // Set default start/end times (local)
+      const now = new Date();
+      const later = new Date(now.getTime() + 60 * 60 * 1000);
+      document.getElementById('apt-start').value = toLocalInput(now);
+      document.getElementById('apt-end').value = toLocalInput(later);
+
+      modal.open();
+    }
+
+    function openNewAppointmentModalWithDate(dateStr) {
+      currentAppointment = null;
+      document.getElementById('modal-title').textContent = 'New Appointment';
+      document.getElementById('appointment-form').reset();
+      deleteBtn.style.display = 'none';
+
+      const date = new Date(dateStr + 'T09:00:00');
+      const endDate = new Date(date.getTime() + 60 * 60 * 1000);
+
+      document.getElementById('apt-start').value = toLocalInput(date);
+      document.getElementById('apt-end').value = toLocalInput(endDate);
+
+      modal.open();
+    }
+
+    function openEditAppointmentModal(event) {
+      currentAppointment = event;
+      document.getElementById('modal-title').textContent = 'Edit Appointment';
+      deleteBtn.style.display = 'inline-flex';
+
+      const ext = event.extendedProps || {};
+      document.getElementById('apt-title').value = event.title;
+      document.getElementById('apt-type').value = ext.appointment_type || '';
+      document.getElementById('apt-start').value = event.start ? toLocalInput(event.start) : '';
+      document.getElementById('apt-end').value = event.end ? toLocalInput(event.end) : '';
+      document.getElementById('apt-driver').value = ext.driver_name || '';
+      document.getElementById('apt-container').value = ext.container_id || '';
+      document.getElementById('apt-location').value = ext.location || '';
+      document.getElementById('apt-status').value = ext.status || 'scheduled';
+      document.getElementById('apt-notes').value = ext.notes || '';
+
+      modal.open();
+    }
+
+    async function saveAppointment() {
+      const form = document.getElementById('appointment-form');
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData);
+
+      // Validate
+      if (!data.title || !data.start_time || !data.end_time) {
+        showMessage('❌ Title, start time, and end time are required', 'error');
+        return;
+      }
+
+      // Convert local times to UTC ISO for storage
+      data.start_time = toUTCISO(data.start_time);
+      data.end_time = toUTCISO(data.end_time);
+
+      try {
+        const url = currentAppointment
+          ? `/api/appointments/${currentAppointment.id}`
+          : '/api/appointments';
+
+        const method = currentAppointment ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+          showMessage(currentAppointment ? '✅ Appointment updated' : '✅ Appointment created', 'success');
+          modal.close();
+          calendar.refetchEvents();
+          loadContainerPanel();
+        } else {
+          console.error('Save failed:', result);
+          showMessage('❌ Failed to save appointment: ' + (result.error || 'unknown error'), 'error');
+        }
+      } catch (error) {
+        console.error('Error saving appointment:', error);
+        showMessage('❌ Error saving appointment: ' + error.message, 'error');
+      }
+    }
+
+    async function deleteAppointment() {
+      if (!currentAppointment) return;
+      if (!confirm('Are you sure you want to delete this appointment?')) return;
+
+      try {
+        const response = await fetch(`/api/appointments/${currentAppointment.id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          showMessage('✅ Appointment deleted', 'success');
+          modal.close();
+          calendar.refetchEvents();
+          loadContainerPanel();
+        } else {
+          showMessage('❌ Failed to delete appointment', 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting appointment:', error);
+        showMessage('❌ Error deleting appointment', 'error');
+      }
+    }
+
+    // Initialize
+    initCalendar();
+    loadContainerPanel();
+  </script>
+  <script src="/sidebar.js"></script>
+</body>
+</html>

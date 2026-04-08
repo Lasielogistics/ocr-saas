@@ -1,0 +1,175 @@
+version: '3.8'
+
+services:
+  ui:
+    build: ../ui
+    container_name: tms-ui
+    ports:
+      - "3000:80"
+    volumes:
+      - /data/projects/tms/ui:/usr/share/nginx/html:ro
+    networks:
+      - tms-network
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  email-agent:
+    build: ./email-agent
+    container_name: tms-email-agent
+    volumes:
+      - /data/projects/tms/email-agent:/app
+      - /data/ocr/pending:/data/inbound
+    environment:
+      - IMAP_HOST=${IMAP_HOST}
+      - IMAP_PORT=${IMAP_PORT}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+    networks:
+      - tms-network
+
+  ocr:
+    build: ./ocr
+    container_name: tms-ocr
+    volumes:
+      - /data/ocr/pending:/data/pending
+      - /data/ocr/temp:/data/temp
+      - /data/ocr/processed:/data/processed
+      - /data/ocr/review:/data/review
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+    networks:
+      - tms-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: tms-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - tms-network
+    restart: unless-stopped
+
+  ocr_api:
+    build: ../ocr_api
+    container_name: tms-ocr-api
+    ports:
+      - "9010:9000"
+    volumes:
+      - /data/ocr:/data/ocr
+      - /data/projects/tms/shared:/app/shared
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CUSTOMER_CONFIG_PATH=/app/shared/customers.json
+    depends_on:
+      - redis
+    networks:
+      - tms-network
+    restart: unless-stopped
+
+  ocr_worker:
+    build: ../worker
+    container_name: tms-ocr-worker
+    volumes:
+      - /data/ocr:/data/ocr
+      - /data/projects/tms/shared:/app/shared
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CUSTOMER_CONFIG_PATH=/app/shared/customers.json
+    depends_on:
+      - redis
+    networks:
+      - tms-network
+    restart: unless-stopped
+
+  appointments:
+    build: ./appointments
+    container_name: tms-appointments
+    volumes:
+      - /data/projects/tms/appointments:/app
+      - /data/logs:/logs
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+    networks:
+      - tms-network
+
+  invoices:
+    build: ./invoices
+    container_name: tms-invoices
+    volumes:
+      - /data/projects/tms/invoices:/app
+      - /mnt/qnap-tms/exports:/exports
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+    networks:
+      - tms-network
+
+  email:
+    build: ./email
+    container_name: tms-email
+    volumes:
+      - /data/projects/tms/email:/app
+      - /data/logs:/logs
+    environment:
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+    networks:
+      - tms-network
+
+  api:
+    build: ../api
+    container_name: tms-api
+    ports:
+      - "9001:9000"
+    volumes:
+      - /data/projects/tms/api:/app
+      - /data/projects/tms/chat:/chat
+      - /data/logs:/logs
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - LEMONADE_API_BASE=${LEMONADE_API_BASE}
+      - LEMONADE_MODEL=${LEMONADE_MODEL}
+      - LOG_ORIGINS=${LOG_ORIGINS}
+      - APM_API_KEY=${APM_API_KEY}
+      - APM_API_BASE_URL=${APM_API_BASE_URL}
+      - APM_CUSTOMER_TOKEN=${APM_CUSTOMER_TOKEN}
+    extra_hosts:
+      - "lemonade-server.ai:host-gateway"
+    networks:
+      - tms-network
+    restart: unless-stopped
+
+  apm-scraper:
+    build: /data/projects/tms/appointments/apm
+    container_name: tms-apm-scraper
+    volumes:
+      - /data/projects/tms/appointments/apm:/app
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - APM_USERNAME=${APM_USERNAME}
+      - APM_PASSWORD=${APM_PASSWORD}
+      - TERMINAL=APM
+      - COMPANY_NAME=${COMPANY_NAME}
+    networks:
+      - tms-network
+    restart: unless-stopped
+
+networks:
+  tms-network:
+    driver: bridge
+
+volumes:
+  redis_data:

@@ -1,0 +1,10 @@
+# Environment variables (contains secrets)
+.env
+
+# Docker
+data/
+logs/
+node_modules/
+
+# Build
+*.log

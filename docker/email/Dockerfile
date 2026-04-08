@@ -1,0 +1,5 @@
+# Placeholder Dockerfile for email container
+FROM node:20-alpine
+WORKDIR /app
+RUN echo "Email container placeholder"
+CMD ["tail", "-f", "/dev/null"]

@@ -1,0 +1,15 @@
+{
+  "cust_example_001": {
+    "customer_name": "Example Logistics Inc",
+    "supabase_url": "https://example.supabase.co",
+    "supabase_key": "eyJhbGcOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "api_key_hash": "sha256_hash_of_api_key_here",
+    "email_imap": {
+      "host": "outlook.office365.com",
+      "port": 993,
+      "user": "documents@example.com",
+      "password": "imap_password_here",
+      "folder": "INBOX"
+    }
+  }
+}

@@ -1,0 +1,168 @@
+{
+	"info": {
+		"_postman_id": "lbct-api-collection",
+		"name": "LBCT API",
+		"description": "LBCT Appointment Web Service API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "289be624a2caf79fc8622bf3a9bdd735",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "GETTER - Get Appointments",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "289be624a2caf79fc8622bf3a9bdd735",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "text/xml; charset=utf-8"
+					},
+					{
+						"key": "SOAPAction",
+						"value": "http://tempuri.org/IServiceAppointmentService/GETTER"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tem=\"http://tempuri.org/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <tem:GETTER>\n         <tem:request>\n            <tem:City></tem:City>\n            <tem:DateFrom>2026-04-01</tem:DateFrom>\n            <tem:DateTo>2026-04-30</tem:DateTo>\n            <tem:Status></tem:Status>\n            <tem:ApptNumber></tem:ApptNumber>\n         </tem:request>\n      </tem:GETTER>\n   </soapenv:Body>\n</soapenv:Envelope>"
+				},
+				"url": {
+					"raw": "https://api.lbct.com/appointmentservicemigrate/appointmentservice.svc",
+					"protocol": "https",
+					"host": ["api", "lbct", "com"],
+					"path": ["appointmentservicemigrate", "appointmentservice.svc"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "CREATESERVICEAPPOINTMENT - Create Appointment",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "289be624a2caf79fc8622bf3a9bdd735",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "text/xml; charset=utf-8"
+					},
+					{
+						"key": "SOAPAction",
+						"value": "http://tempuri.org/IServiceAppointmentService/CREATESERVICEAPPOINTMENT"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tem=\"http://tempuri.org/\" xmlns:arr=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <tem:CREATESERVICEAPPOINTMENT>\n         <tem:request>\n            <tem:SCAC>LLOV</tem:SCAC>\n            <tem:City></tem:City>\n            <tem:Date></tem:Date>\n            <tem:Time></tem:Time>\n            <tem:Terminal></tem:Terminal>\n            <tem:ApptType></tem:ApptType>\n            <tem:Container></tem:Container>\n            <tem:Email></tem:Email>\n            <tem:Phone></tem:Phone>\n            <tem:Appointments></tem:Appointments>\n         </tem:request>\n      </tem:CREATESERVICEAPPOINTMENT>\n   </soapenv:Body>\n</soapenv:Envelope>"
+				},
+				"url": {
+					"raw": "https://api.lbct.com/appointmentservicemigrate/appointmentservice.svc",
+					"protocol": "https",
+					"host": ["api", "lbct", "com"],
+					"path": ["appointmentservicemigrate", "appointmentservice.svc"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "UPDATESERVICEAPPOINTMENT - Update Appointment",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "289be624a2caf79fc8622bf3a9bdd735",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "text/xml; charset=utf-8"
+					},
+					{
+						"key": "SOAPAction",
+						"value": "http://tempuri.org/IServiceAppointmentService/UPDATESERVICEAPPOINTMENT"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tem=\"http://tempuri.org/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <tem:UPDATESERVICEAPPOINTMENT>\n         <tem:request>\n            <tem:ApptNumber></tem:ApptNumber>\n            <tem:Status></tem:Status>\n            <tem:Date></tem:Date>\n            <tem:Time></tem:Time>\n         </tem:request>\n      </tem:UPDATESERVICEAPPOINTMENT>\n   </soapenv:Body>\n</soapenv:Envelope>"
+				},
+				"url": {
+					"raw": "https://api.lbct.com/appointmentservicemigrate/appointmentservice.svc",
+					"protocol": "https",
+					"host": ["api", "lbct", "com"],
+					"path": ["appointmentservicemigrate", "appointmentservice.svc"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DELETESERVICEAPPOINTMENT - Delete Appointment",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "289be624a2caf79fc8622bf3a9bdd735",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "text/xml; charset=utf-8"
+					},
+					{
+						"key": "SOAPAction",
+						"value": "http://tempuri.org/IServiceAppointmentService/DELETESERVICEAPPOINTMENT"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tem=\"http://tempuri.org/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <tem:DELETESERVICEAPPOINTMENT>\n         <tem:request>\n            <tem:ApptNumber></tem:ApptNumber>\n         </tem:request>\n      </tem:DELETESERVICEAPPOINTMENT>\n   </soapenv:Body>\n</soapenv:Envelope>"
+				},
+				"url": {
+					"raw": "https://api.lbct.com/appointmentservicemigrate/appointmentservice.svc",
+					"protocol": "https",
+					"host": ["api", "lbct", "com"],
+					"path": ["appointmentservicemigrate", "appointmentservice.svc"]
+				}
+			},
+			"response": []
+		}
+	]
+}
