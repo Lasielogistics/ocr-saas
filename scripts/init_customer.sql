@@ -7,11 +7,11 @@ CREATE TABLE IF NOT EXISTS ocr_documents (
     job_id TEXT NOT NULL UNIQUE,
     filename TEXT NOT NULL,
     document_type TEXT CHECK (document_type IN (
-        'pod','invoice','receipt','rate_confirmation','fuel_receipt',
-        'scale_ticket','eir','gate_ticket','load_confirmation',
-        'terminal_paperwork','appointment_confirmation','container_pickup',
-        'container_dropoff','chassis_paperwork','yard_ticket',
-        'reference_sheet','unknown'
+        'pod','invoice','container_eir_in','container_eir_out',
+        'chassis_eir_in','chassis_eir_out','receipt','rate_confirmation',
+        'fuel_receipt','scale_ticket','gate_ticket','load_confirmation',
+        'terminal_paperwork','appointment_confirmation',
+        'chassis_paperwork','yard_ticket','reference_sheet','unknown'
     )),
     ocr_text TEXT,
     page_count INTEGER DEFAULT 1,
@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS ocr_documents (
     )),
     error_message TEXT,
     webhook_url TEXT,
+    parent_job_id TEXT,
     processed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -43,6 +44,7 @@ CREATE TABLE IF NOT EXISTS ocr_extracted_fields (
 CREATE INDEX IF NOT EXISTS idx_ocr_documents_job_id ON ocr_documents(job_id);
 CREATE INDEX IF NOT EXISTS idx_ocr_documents_status ON ocr_documents(status);
 CREATE INDEX IF NOT EXISTS idx_ocr_documents_created_at ON ocr_documents(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ocr_documents_parent_job_id ON ocr_documents(parent_job_id);
 CREATE INDEX IF NOT EXISTS idx_ocr_extracted_fields_doc_id ON ocr_extracted_fields(document_id);
 CREATE INDEX IF NOT EXISTS idx_ocr_extracted_fields_name ON ocr_extracted_fields(field_name);
 

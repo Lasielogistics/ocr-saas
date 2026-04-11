@@ -24,9 +24,11 @@ class StatusResponse(BaseModel):
     """Response model for job status."""
     job_id: str
     status: DocumentStatus
-    document_type: Optional[DocumentType] = None
+    document_type: Optional[str] = None
     confidence_score: Optional[float] = None
     extracted_fields: dict[str, str] = Field(default_factory=dict)
+    container_number: Optional[str] = None
+    company: Optional[str] = None
     ocr_text: Optional[str] = None
     error_message: Optional[str] = None
     processed_at: Optional[datetime] = None

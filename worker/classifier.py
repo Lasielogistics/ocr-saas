@@ -18,6 +18,13 @@ class DocumentClassifier:
             "invoice", "bill to", "amount due", "inv#", "invoice #",
             "total due", "payment terms", "billable to",
         ],
+        DocumentType.CONTAINER_EIR_IN: [
+            "equipment interchange", "eir", "container inspection",
+            "interchange receipt", "equipment receipt", "in gate",
+        ],
+        DocumentType.CONTAINER_EIR_OUT: [
+            "out gate", "exit gate", "gate out",
+        ],
         DocumentType.RECEIPT: [
             "receipt", "paid", "cash", "received payment",
             "thank you for your payment",
@@ -34,43 +41,17 @@ class DocumentClassifier:
             "scale ticket", "weight", "gross weight", "tare weight",
             "net weight", "weigh ticket", "scale house",
         ],
-        DocumentType.EIR: [
-            "equipment interchange", "eir", "container inspection",
-            "interchange receipt", "equipment receipt",
+        DocumentType.CHASSIS_EIR_IN: [
+            "chassis", "chassis #", "chassis number", "in gate",
         ],
-        DocumentType.GATE_TICKET: [
-            "gate ticket", "gate pass", "yard", "gate in", "gate out",
+        DocumentType.CHASSIS_EIR_OUT: [
+            "chassis", "chassis #", "out gate", "exit gate",
         ],
         DocumentType.LOAD_CONFIRMATION: [
             "load confirmation", "load #", "pickup", "load number",
             "load confirmation", "dispatch",
         ],
-        DocumentType.TERMINAL_PAPERWORK: [
-            "terminal", "port", "apm", "eagle", "wgm", "everport",
-            "terminal information",
-        ],
-        DocumentType.APPOINTMENT_CONFIRMATION: [
-            "appointment", "confirmed", "schedule", "time slot",
-            "appointment #", "appointment confirmation",
-        ],
-        DocumentType.CONTAINER_PICKUP: [
-            "container pickup", "pickup", "container #", "container number",
-            "empty return", "pulling", "unit #",
-        ],
-        DocumentType.CONTAINER_DROPOFF: [
-            "dropoff", "drop off", "delivery", "return",
-            "container return",
-        ],
-        DocumentType.CHASSIS_PAPERWORK: [
-            "chassis", "chassis #", "chassis number",
-        ],
-        DocumentType.YARD_TICKET: [
-            "yard ticket", "yard", "yard location",
-        ],
-        DocumentType.REFERENCE_SHEET: [
-            "reference", "customer", "shipper", "consignee",
-            "contact", "phone", "email",
-        ],
+        DocumentType.UNKNOWN: [],
     }
 
     # Patterns for specific document identification
@@ -85,13 +66,15 @@ class DocumentClassifier:
             r"inv\s*\d+",
             r"amount\s+due\s*\$",
         ],
-        DocumentType.EIR: [
+        DocumentType.CONTAINER_EIR_IN: [
             r"equipment\s+interchange",
             r"eir\s*\d+",
         ],
-        DocumentType.CONTAINER_PICKUP: [
-            r"[A-Z]{4}\s*\d{7}",  # Standard container number
+        DocumentType.CONTAINER_EIR_OUT: [
+            r"out\s+gate",
         ],
+        DocumentType.CHASSIS_EIR_IN: [],
+        DocumentType.CHASSIS_EIR_OUT: [],
     }
 
     def classify(self, text: str, confidence: float = 0.0) -> str:
@@ -126,6 +109,14 @@ class DocumentClassifier:
                 if re.search(pattern, text, re.IGNORECASE):
                     scores[doc_type] = scores.get(doc_type, 0) + 2
 
+        # Special handling for EIR types - check in/out keywords
+        eir_score = scores.get(DocumentType.CONTAINER_EIR_IN, 0) + scores.get(DocumentType.CHASSIS_EIR_IN, 0)
+        if eir_score > 0:
+            if "in gate" in text_lower or "in_gat" in text_lower:
+                return DocumentType.CONTAINER_EIR_IN.value
+            elif "out gate" in text_lower or "out_gat" in text_lower:
+                return DocumentType.CONTAINER_EIR_OUT.value
+
         # Find best match
         if not scores or max(scores.values()) == 0:
             return DocumentType.UNKNOWN.value
@@ -156,6 +147,20 @@ class DocumentClassifier:
             score = sum(1 for k in keywords if k in text_lower)
             scores[doc_type] = score
 
+        # Check patterns
+        for doc_type, patterns in self.PATTERNS.items():
+            for pattern in patterns:
+                if re.search(pattern, text, re.IGNORECASE):
+                    scores[doc_type] = scores.get(doc_type, 0) + 2
+
+        # Special handling for EIR types
+        eir_score = scores.get(DocumentType.CONTAINER_EIR_IN, 0) + scores.get(DocumentType.CHASSIS_EIR_IN, 0)
+        if eir_score > 0:
+            if "in gate" in text_lower or "in_gat" in text_lower:
+                return DocumentType.CONTAINER_EIR_IN.value, 0.8
+            elif "out gate" in text_lower or "out_gat" in text_lower:
+                return DocumentType.CONTAINER_EIR_OUT.value, 0.8
+
         if not scores or max(scores.values()) == 0:
             return DocumentType.UNKNOWN.value, 0.0
 
@@ -164,7 +169,10 @@ class DocumentClassifier:
 
         # Normalize confidence to 0-1
         max_possible_score = len(self.KEYWORDS[best_type])
-        confidence = min(best_score / max_possible_score, 1.0)
+        if max_possible_score == 0:
+            confidence = 0.0
+        else:
+            confidence = min(best_score / max_possible_score, 1.0)
 
         if confidence < 0.1:
             return DocumentType.UNKNOWN.value, confidence

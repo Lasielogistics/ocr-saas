@@ -9,6 +9,7 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -61,6 +62,24 @@ async def health_check():
     return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
 
 
+class UploadResponse(BaseModel):
+    job_id: str
+    status: DocumentStatus
+    filename: str
+    created_at: datetime
+    page_count: Optional[int] = 1
+    parent_job_id: Optional[str] = None
+
+
+class MultiUploadResponse(BaseModel):
+    """Response for multi-page PDF upload."""
+    job_ids: list[str]
+    page_count: int
+    filename: str
+    created_at: datetime
+    parent_job_id: Optional[str] = None
+
+
 @app.post("/api/v1/upload", response_model=UploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
@@ -70,7 +89,10 @@ async def upload_document(
     """
     Upload a document for OCR processing.
 
-    Returns a job_id that can be used to poll for status.
+    For multi-page PDFs, each page is split into a separate document.
+    Returns the primary job_id - use /api/v1/status/{job_id} to check status.
+
+    For multi-page PDFs, use /api/v1/upload/multi to get all page job_ids.
     """
     storage = get_storage()
 
@@ -98,12 +120,81 @@ async def upload_document(
     config = SupabaseClientFactory.get_config(customer_id)
     supabase = SupabaseClientFactory.get_client(customer_id)
 
-    # Insert document record
+    # Check if PDF has multiple pages
+    is_multi_page = file.filename.lower().endswith('.pdf')
+    page_count = 1
+    parent_job_id = None
+    final_job_id = job_id
+
+    if is_multi_page:
+        # Split PDF into individual pages
+        from pdf2image import convert_from_path
+        images = convert_from_path(file_path, dpi=200)
+        page_count = len(images)
+
+        if page_count > 1:
+            # Multi-page PDF - will create separate jobs for each page
+            parent_job_id = job_id
+
+            # Get customer pending directory for split pages
+            customer_pending = storage.pending_path / customer_id
+            customer_pending.mkdir(parents=True, exist_ok=True)
+
+            # Process pages
+            page_job_ids = []
+            for page_num in range(page_count):
+                # Create page job_id
+                page_job_id = f"{job_id[:8]}_p{page_num + 1:03d}"
+
+                # Save individual page as PNG
+                from PIL import Image
+                page_path = customer_pending / f"{page_job_id}.png"
+                images[page_num].save(page_path, "PNG")
+
+                # Insert document record for this page
+                doc_record = {
+                    "job_id": page_job_id,
+                    "filename": f"{Path(file.filename).stem}_page_{page_num + 1}.png",
+                    "status": "queued",
+                    "webhook_url": webhook_url or config.webhook_url,
+                    "page_count": 1,
+                    "parent_job_id": parent_job_id,
+                }
+                supabase.table("ocr_documents").insert([doc_record]).execute()
+
+                # Queue OCR task for this page
+                celery_app.send_task(
+                    "tasks.process_document",
+                    args=[page_job_id, customer_id, str(page_path)],
+                    task_id=page_job_id,
+                )
+                page_job_ids.append(page_job_id)
+
+            # Mark original as parent (completed splitting)
+            supabase.table("ocr_documents").update({
+                "status": "completed",
+                "page_count": page_count,
+            }).eq("job_id", job_id).execute()
+
+            # Return first page job_id as primary
+            final_job_id = page_job_ids[0]
+
+            return UploadResponse(
+                job_id=final_job_id,
+                status=DocumentStatus.QUEUED,
+                filename=f"{Path(file.filename).stem}_page_1.png",
+                created_at=datetime.utcnow(),
+                page_count=page_count,
+                parent_job_id=parent_job_id,
+            )
+
+    # Single page document
     doc_record = {
         "job_id": job_id,
         "filename": file.filename,
         "status": "queued",
         "webhook_url": webhook_url or config.webhook_url,
+        "page_count": 1,
     }
     supabase.table("ocr_documents").insert([doc_record]).execute()
 
@@ -119,6 +210,7 @@ async def upload_document(
         status=DocumentStatus.QUEUED,
         filename=file.filename,
         created_at=datetime.utcnow(),
+        page_count=1,
     )
 
 
@@ -178,11 +270,28 @@ async def list_documents(
 
     documents = []
     for doc in result.data:
+        # Fetch extracted fields for this document
+        fields_result = supabase.table("ocr_extracted_fields").select("*").eq("document_id", doc["id"]).execute()
+        extracted_fields = {f["field_name"]: f["field_value"] for f in fields_result.data}
+
+        # Get container number and lookup company
+        container_number = extracted_fields.get("container_number")
+        company = None
+        if container_number:
+            container_result = supabase.table("containers").select("Company").eq(
+                "container_number", container_number
+            ).execute()
+            if container_result.data:
+                company = container_result.data[0].get("Company")
+
         documents.append(StatusResponse(
             job_id=doc["job_id"],
             status=DocumentStatus(doc["status"]),
             document_type=doc.get("document_type"),
             confidence_score=doc.get("confidence_score"),
+            extracted_fields=extracted_fields,
+            container_number=container_number,
+            company=company,
             error_message=doc.get("error_message"),
             processed_at=doc.get("processed_at"),
             created_at=doc["created_at"],
@@ -274,6 +383,294 @@ async def create_customer(request: CustomerCreateRequest):
         api_key=api_key,
         message="Customer created successfully"
     )
+
+
+class DocumentUpdateRequest(BaseModel):
+    document_type: Optional[str] = None
+    ocr_text: Optional[str] = None
+    extracted_fields: Optional[dict[str, str]] = None
+
+
+class DocumentUpdateResponse(BaseModel):
+    success: bool
+    message: str
+
+
+@app.post("/api/v1/documents/{job_id}", response_model=DocumentUpdateResponse)
+async def update_document(
+    job_id: str,
+    request: DocumentUpdateRequest,
+    customer_id: str = Depends(get_current_customer),
+):
+    """Update document metadata."""
+    supabase = SupabaseClientFactory.get_client(customer_id)
+
+    # Check document exists
+    result = supabase.table("ocr_documents").select("id").eq("job_id", job_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Build update data
+    update_data = {}
+    if request.document_type:
+        update_data["document_type"] = request.document_type
+    if request.ocr_text is not None:
+        update_data["ocr_text"] = request.ocr_text
+    if request.extracted_fields:
+        update_data["status"] = "completed"
+
+    if update_data:
+        supabase.table("ocr_documents").update(update_data).eq("job_id", job_id).execute()
+
+    return DocumentUpdateResponse(success=True, message=f"Document {job_id} updated")
+
+
+@app.post("/api/v1/documents/{job_id}/review")
+async def update_document_review(
+    job_id: str,
+    document_type: Optional[str] = None,
+    customer_id: str = Depends(get_current_customer),
+):
+    """Update document for review - set document_type or mark for review."""
+    supabase = SupabaseClientFactory.get_client(customer_id)
+
+    # Fetch document
+    result = supabase.table("ocr_documents").select("*").eq("job_id", job_id).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    doc = result.data[0]
+
+    # Update fields
+    update_data = {"status": "review"}
+    if document_type:
+        update_data["document_type"] = document_type
+
+    supabase.table("ocr_documents").update(update_data).eq("job_id", job_id).execute()
+
+    return {"success": True, "message": f"Document {job_id} updated"}
+
+
+@app.get("/api/v1/review/documents", response_model=DocumentListResponse)
+async def get_review_documents(
+    limit: int = 50,
+    offset: int = 0,
+    customer_id: str = Depends(get_current_customer),
+):
+    """Get all documents in review status."""
+    supabase = SupabaseClientFactory.get_client(customer_id)
+
+    result = supabase.table("ocr_documents").select("*")\
+        .eq("status", "review")\
+        .order("created_at", desc=True)\
+        .limit(limit)\
+        .offset(offset)\
+        .execute()
+
+    documents = []
+    for doc in result.data:
+        # Fetch extracted fields
+        fields_result = supabase.table("ocr_extracted_fields").select("*").eq("document_id", doc["id"]).execute()
+        extracted_fields = {f["field_name"]: f["field_value"] for f in fields_result.data}
+
+        # Get container number and lookup company
+        container_number = extracted_fields.get("container_number")
+        company = None
+        if container_number:
+            container_result = supabase.table("containers").select("Company").eq(
+                "container_number", container_number
+            ).execute()
+            if container_result.data:
+                company = container_result.data[0].get("Company")
+
+        documents.append(StatusResponse(
+            job_id=doc["job_id"],
+            status=DocumentStatus(doc["status"]),
+            document_type=doc.get("document_type"),
+            confidence_score=doc.get("confidence_score"),
+            extracted_fields=extracted_fields,
+            container_number=container_number,
+            company=company,
+            ocr_text=doc.get("ocr_text"),
+            error_message=doc.get("error_message"),
+            processed_at=doc.get("processed_at"),
+            created_at=doc["created_at"],
+        ))
+
+    return DocumentListResponse(documents=documents, total=len(documents))
+
+
+@app.get("/api/v1/failed/documents", response_model=DocumentListResponse)
+async def get_failed_documents(
+    limit: int = 50,
+    offset: int = 0,
+    customer_id: str = Depends(get_current_customer),
+):
+    """Get all documents in failed status."""
+    supabase = SupabaseClientFactory.get_client(customer_id)
+
+    result = supabase.table("ocr_documents").select("*")\
+        .eq("status", "failed")\
+        .order("created_at", desc=True)\
+        .limit(limit)\
+        .offset(offset)\
+        .execute()
+
+    documents = []
+    for doc in result.data:
+        # Fetch extracted fields
+        fields_result = supabase.table("ocr_extracted_fields").select("*").eq("document_id", doc["id"]).execute()
+        extracted_fields = {f["field_name"]: f["field_value"] for f in fields_result.data}
+
+        # Get container number and lookup company
+        container_number = extracted_fields.get("container_number")
+        company = None
+        if container_number:
+            container_result = supabase.table("containers").select("Company").eq(
+                "container_number", container_number
+            ).execute()
+            if container_result.data:
+                company = container_result.data[0].get("Company")
+
+        documents.append(StatusResponse(
+            job_id=doc["job_id"],
+            status=DocumentStatus(doc["status"]),
+            document_type=doc.get("document_type"),
+            confidence_score=doc.get("confidence_score"),
+            extracted_fields=extracted_fields,
+            container_number=container_number,
+            company=company,
+            ocr_text=doc.get("ocr_text"),
+            error_message=doc.get("error_message"),
+            processed_at=doc.get("processed_at"),
+            created_at=doc["created_at"],
+        ))
+
+    return DocumentListResponse(documents=documents, total=len(documents))
+
+
+@app.get("/api/v1/documents/{job_id}/file")
+async def get_document_file(
+    job_id: str,
+    customer_id: str = Depends(get_current_customer),
+):
+    """Serve the original document file."""
+    from fastapi.responses import FileResponse, StreamingResponse
+    from shared.storage import get_storage
+
+    storage = get_storage()
+
+    # Check processed first, then pending
+    processed_path = storage.processed_path / f"{job_id}.pdf"
+    if processed_path.exists():
+        return FileResponse(
+            path=str(processed_path),
+            filename=f"{job_id}.pdf",
+            media_type="application/pdf"
+        )
+
+    # Check pending (customer subdirectory)
+    for cust_dir in storage.pending_path.iterdir():
+        if cust_dir.is_dir():
+            pending_file = cust_dir / f"{job_id}.pdf"
+            if pending_file.exists():
+                return FileResponse(
+                    path=str(pending_file),
+                    filename=f"{job_id}.pdf",
+                    media_type="application/pdf"
+                )
+
+    raise HTTPException(status_code=404, detail="File not found")
+
+
+@app.get("/api/v1/containers/search")
+async def search_containers(
+    q: str = "",
+    limit: int = 10,
+    customer_id: str = Depends(get_current_customer),
+):
+    """Search containers by container number or other fields."""
+    supabase = SupabaseClientFactory.get_client(customer_id)
+
+    if not q or len(q) < 2:
+        return {"containers": [], "total": 0}
+
+    # Search by container number (partial match)
+    result = supabase.table("containers").select("*").ilike(
+        "container_number", f"%{q}%"
+    ).limit(limit).execute()
+
+    return {"containers": result.data, "total": len(result.data)}
+
+
+class DocumentSaveRequest(BaseModel):
+    document_type: Optional[str] = None
+    container_number: Optional[str] = None
+    chassis_number: Optional[str] = None
+    terminal: Optional[str] = None
+    seal_number: Optional[str] = None
+    vessel_voyage: Optional[str] = None
+    driver_name: Optional[str] = None
+    gate_in: Optional[str] = None
+    gate_out: Optional[str] = None
+    notes: Optional[str] = None
+    ocr_text: Optional[str] = None
+
+
+@app.post("/api/v1/documents/{job_id}/save")
+async def save_document_review(
+    job_id: str,
+    request: DocumentSaveRequest,
+    customer_id: str = Depends(get_current_customer),
+):
+    """Save reviewed document data including extracted fields."""
+    supabase = SupabaseClientFactory.get_client(customer_id)
+
+    # Check document exists
+    result = supabase.table("ocr_documents").select("id").eq("job_id", job_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    doc_id = result.data[0]["id"]
+
+    # Update document
+    update_data = {
+        "status": "completed",
+        "document_type": request.document_type,
+        "ocr_text": request.ocr_text,
+    }
+    supabase.table("ocr_documents").update(update_data).eq("job_id", job_id).execute()
+
+    # Save extracted fields
+    fields_to_save = {
+        "container_number": request.container_number,
+        "chassis_number": request.chassis_number,
+        "terminal": request.terminal,
+        "seal_number": request.seal_number,
+        "vessel_voyage": request.vessel_voyage,
+        "driver_name": request.driver_name,
+        "gate_in": request.gate_in,
+        "gate_out": request.gate_out,
+        "notes": request.notes,
+    }
+
+    # Remove None values
+    fields_to_save = {k: v for k, v in fields_to_save.items() if v is not None}
+
+    # Delete existing fields for this document
+    supabase.table("ocr_extracted_fields").delete().eq("document_id", doc_id).execute()
+
+    # Insert new fields
+    for field_name, field_value in fields_to_save.items():
+        supabase.table("ocr_extracted_fields").insert([{
+            "document_id": doc_id,
+            "field_name": field_name,
+            "field_value": str(field_value),
+            "confidence": 1.0,  # Manual entry = 100% confidence
+        }]).execute()
+
+    return {"success": True, "message": f"Document {job_id} saved"}
 
 
 if __name__ == "__main__":
