@@ -9,7 +9,8 @@ class DocumentStatus(str, Enum):
     PENDING = "pending"
     QUEUED = "queued"
     PROCESSING = "processing"
-    COMPLETED = "completed"
+    OCR = "ocr"
+    VERIFIED = "verified"
     FAILED = "failed"
     REVIEW = "review"
 

@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>OCR Review - TMS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --primary-light: #818cf8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      --sidebar-width: 260px;
+      --sidebar-collapsed: 72px;
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #f0f4ff 0%, #fafbff 100%);
+      min-height: 100vh;
+      color: var(--gray-700);
+      overflow: hidden;
+    }
+    .main-content {
+      padding: 1.5rem 2rem;
+      margin-left: var(--sidebar-width);
+      transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body.sidebar-collapsed .main-content { margin-left: var(--sidebar-collapsed); }
+
+    /* Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .page-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--gray-800);
+    }
+    .page-title-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+    .btn-refresh {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 0.5rem 1rem;
+      font-weight: 500;
+      color: var(--gray-600);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .btn-refresh:hover {
+      background: var(--gray-50);
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr; } }
+    .stat-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+      border: 1px solid var(--gray-100);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+    .stat-card.review::before { background: linear-gradient(90deg, var(--warning), #fbbf24); }
+    .stat-card.failed::before { background: linear-gradient(90deg, var(--danger), #f87171); }
+    .stat-card.completed::before { background: linear-gradient(90deg, var(--success), #34d399); }
+    .stat-card.total::before { background: linear-gradient(90deg, var(--info), #60a5fa); }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    .stat-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+    .stat-card-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--gray-500);
+    }
+    .stat-card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+    .stat-card.review .stat-card-icon { background: #fef3c7; color: var(--warning); }
+    .stat-card.failed .stat-card-icon { background: #fee2e2; color: var(--danger); }
+    .stat-card.completed .stat-card-icon { background: #d1fae5; color: var(--success); }
+    .stat-card.total .stat-card-icon { background: #dbeafe; color: var(--info); }
+    .stat-card-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--gray-800);
+      line-height: 1;
+    }
+    .stat-card-trend {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      margin-top: 0.25rem;
+    }
+
+    /* Filter Section */
+    .filter-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      border: 1px solid var(--gray-100);
+    }
+    .filter-row {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .filter-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .form-select, .form-control {
+      border-radius: 10px;
+      border: 1px solid var(--gray-200);
+      padding: 0.5rem 2rem 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      width: auto;
+      min-width: fit-content;
+    }
+    .form-select:focus, .form-control:focus {
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    .btn-apply {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 0.5rem 1.25rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    }
+    .btn-apply:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+
+    /* Document Table */
+    .table-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      border: 1px solid var(--gray-100);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .table-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--gray-100);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .table-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--gray-700);
+    }
+    .table-count {
+      font-size: 0.8rem;
+      color: var(--gray-500);
+      background: var(--gray-100);
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+    }
+    .review-table { margin: 0; table-layout: fixed; width: 100%; }
+    .review-table thead th {
+      background: var(--gray-50);
+      color: var(--gray-600);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.875rem 1rem;
+      border: none;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .review-table thead th::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--gray-200);
+    }
+    .review-table thead th.sortable { cursor: pointer; user-select: none; }
+    .review-table thead th.sortable:hover { color: var(--primary); }
+    .sort-icon { font-size: 0.65rem; margin-left: 0.25rem; opacity: 0.4; }
+    .sort-icon.asc::after { content: '▲'; opacity: 1; }
+    .sort-icon.desc::after { content: '▼'; opacity: 1; }
+    th.sorted .sort-icon { opacity: 1; }
+    .review-table tbody td {
+      padding: 1rem;
+      border-color: var(--gray-100);
+      vertical-align: middle;
+    }
+    .review-table tbody tr { transition: background 0.15s; }
+    .review-table tbody tr:hover { background: var(--gray-50); }
+    .filename-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      color: var(--gray-700);
+    }
+    .filename-icon { color: var(--danger); }
+    .container-number {
+      font-weight: 700;
+      color: var(--gray-800);
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 0.85rem;
+    }
+    .doc-type-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--gray-100);
+      color: var(--gray-600);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .doc-type-badge:hover {
+      background: var(--primary);
+      color: white;
+      transform: scale(1.05);
+    }
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .action-btn.btn-info {
+      background: #dbeafe;
+      color: var(--info);
+      border: none;
+    }
+    .action-btn.btn-info:hover {
+      background: var(--info);
+      color: white;
+    }
+    .action-btn.btn-primary {
+      background: #e0e7ff;
+      color: var(--primary);
+      border: none;
+    }
+    .action-btn.btn-primary:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Status badges */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-review { background: #fef3c7; color: #b45309; }
+    .badge-failed { background: #fee2e2; color: #dc2626; }
+    .badge-completed { background: #d1fae5; color: #059669; }
+    .badge-pending { background: #e0e7ff; color: #4338ca; }
+    .badge-processing { background: #dbeafe; color: #2563eb; }
+    .badge-queued { background: #f3e8ff; color: #7c3aed; }
+
+    /* Modal Styles */
+    .modal-content { border: none; border-radius: 20px; overflow: hidden; }
+    .modal-header {
+      background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-700) 100%);
+      color: white;
+      padding: 1.25rem 1.5rem;
+      border: none;
+    }
+    .modal-title { font-weight: 700; font-size: 1.1rem; }
+    .btn-close { filter: invert(1); opacity: 0.7; }
+    .btn-close:hover { opacity: 1; }
+    .modal-body { padding: 0; display: flex; }
+    .doc-modal-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: calc(100vh - 80px);
+      width: 100%;
+    }
+    @media (max-width: 768px) { .doc-modal-split { grid-template-columns: 1fr; } }
+
+    /* PDF Side */
+    .pdf-panel {
+      background: var(--gray-100);
+      display: flex;
+      flex-direction: column;
+    }
+    .pdf-header {
+      background: white;
+      padding: 0.875rem 1.25rem;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      color: var(--gray-600);
+    }
+    .pdf-frame { flex: 1; width: 100%; border: none; background: var(--gray-50); }
+
+    /* Edit Side */
+    .edit-panel {
+      padding: 1.5rem;
+      overflow-y: auto;
+      height: 100%;
+    }
+    .edit-section { margin-bottom: 1.5rem; }
+    .edit-section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gray-400);
+      margin-bottom: 0.75rem;
+    }
+    .field-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 0.35rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .confidence-badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    .conf-high { background: #d1fae5; color: #059669; }
+    .conf-medium { background: #fef3c7; color: #b45309; }
+    .conf-low { background: #fee2e2; color: #dc2626; }
+    .ocr-text-box {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 1rem;
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 0.8rem;
+      max-height: 150px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--gray-600);
+    }
+
+    /* Action buttons */
+    .btn-save {
+      background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 0.625rem 1.25rem;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s;
+    }
+    .btn-save:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+      color: white;
+    }
+    .btn-fail {
+      background: white;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+      border-radius: 10px;
+      padding: 0.625rem 1.25rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-fail:hover { background: var(--danger); color: white; }
+
+    /* Loading */
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Empty state */
+    .empty-state { padding: 3rem; text-align: center; color: var(--gray-500); }
+    .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+    .empty-state h5 { font-weight: 600; color: var(--gray-600); margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <div class="main-content">
+    <!-- Header -->
+    <div class="page-header">
+      <div class="page-title">
+        <div class="page-title-icon">
+          <i class="mdi mdi-file-check-outline"></i>
+        </div>
+        <div>
+          <div>OCR Document Review</div>
+          <small class="text-muted fw-normal" style="font-size: 0.85rem;">Review and classify extracted documents</small>
+        </div>
+      </div>
+      <button class="btn-refresh" onclick="loadReviewDocs(); loadStats();">
+        <i class="mdi mdi-refresh"></i> Refresh
+      </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card review">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Needs Review</span>
+          <div class="stat-card-icon"><i class="mdi mdi-clipboard-alert-outline"></i></div>
+        </div>
+        <div class="stat-card-value" id="stat-review">0</div>
+        <div class="stat-card-trend">Awaiting classification</div>
+      </div>
+      <div class="stat-card failed">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Failed</span>
+          <div class="stat-card-icon"><i class="mdi mdi-alert-circle-outline"></i></div>
+        </div>
+        <div class="stat-card-value" id="stat-failed">0</div>
+        <div class="stat-card-trend">Processing errors</div>
+      </div>
+      <div class="stat-card completed">
+        <div class="stat-card-header">
+          <span class="stat-card-label">OCR</span>
+          <div class="stat-card-icon"><i class="mdi mdi-text-recognition"></i></div>
+        </div>
+        <div class="stat-card-value" id="stat-completed">0</div>
+        <div class="stat-card-trend">Not yet verified</div>
+      </div>
+      <div class="stat-card total">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Verified</span>
+          <div class="stat-card-icon"><i class="mdi mdi-check-decagram"></i></div>
+        </div>
+        <div class="stat-card-value" id="stat-total">0</div>
+        <div class="stat-card-trend">Manually verified</div>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-card">
+      <div class="filter-row">
+        <div class="filter-group">
+          <span class="filter-label">Status</span>
+          <select id="status-filter" class="form-select form-select-sm" onchange="debouncedLoadReviewDocs()">
+            <option value="ocr">OCR</option>
+            <option value="verified">Verified</option>
+            <option value="review">Needs Review</option>
+            <option value="failed">Failed</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Type</span>
+          <select id="type-filter" class="form-select form-select-sm" onchange="debouncedLoadReviewDocs()">
+            <option value="">All Types</option>
+            <option value="pod">POD</option>
+            <option value="invoice">Invoice</option>
+            <option value="container_eir_in">Container EIR In</option>
+            <option value="container_eir_out">Container EIR Out</option>
+            <option value="chassis_eir_in">Chassis EIR In</option>
+            <option value="chassis_eir_out">Chassis EIR Out</option>
+            <option value="receipt">Receipt</option>
+            <option value="rate_confirmation">Rate Confirmation</option>
+            <option value="fuel_receipt">Fuel Receipt</option>
+            <option value="scale_ticket">Scale Ticket</option>
+            <option value="gate_ticket">Gate Ticket</option>
+            <option value="load_confirmation">Load Confirmation</option>
+            <option value="terminal_paperwork">Terminal Paperwork</option>
+            <option value="appointment_confirmation">Appointment Confirmation</option>
+            <option value="chassis_paperwork">Chassis Paperwork</option>
+            <option value="yard_ticket">Yard Ticket</option>
+            <option value="reference_sheet">Reference Sheet</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Table -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">
+          <i class="mdi mdi-file-document-outline me-2"></i>Documents
+        </span>
+        <span class="table-count" id="doc-count">0 items</span>
+      </div>
+      <div class="table-responsive" id="table-container" style="flex: 1; overflow-y: auto; min-height: 0;">
+        <table class="table review-table">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="filename" onclick="toggleSort('filename')" style="width: 25%;">Document <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="container_number" onclick="toggleSort('container_number')" style="width: 15%;">Container # <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="company" onclick="toggleSort('company')" style="width: 15%;">Customer <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="document_type" onclick="toggleSort('document_type')" style="width: 15%;">Type <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="status" onclick="toggleSort('status')" style="width: 10%;">Status <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="created_at" onclick="toggleSort('created_at')" style="width: 15%;">Date <span class="sort-icon"></span></th>
+              <th style="width: 90px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="review-tbody">
+            <tr><td colspan="7" class="text-center p-4"><div class="spinner mx-auto"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Detail Modal -->
+  <div class="modal fade" id="doc-modal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="mdi mdi-file-edit-outline me-2"></i>Document Review</h5>
+          <div class="ms-auto d-flex gap-2">
+            <button type="button" class="btn btn-light btn-sm" onclick="downloadPdf()">
+              <i class="mdi mdi-download"></i> Download PDF
+            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+        </div>
+        <div class="modal-body p-0">
+          <div class="doc-modal-split">
+            <!-- PDF Preview -->
+            <div class="pdf-panel">
+              <div class="pdf-header">
+                <i class="mdi mdi-file-pdf-box"></i> Document Preview
+              </div>
+              <iframe id="modal-pdf-frame" class="pdf-frame"></iframe>
+            </div>
+            <!-- Edit Form -->
+            <div class="edit-panel">
+              <div class="edit-section">
+                <div class="edit-section-title">Document Info</div>
+                <div class="fw-bold mb-3" id="modal-filename">—</div>
+
+                <div class="mb-3">
+                  <label class="field-label">Document Type</label>
+                  <select class="form-select" id="edit-document-type">
+                    <option value="">Select type...</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="field-label">Link to Container</label>
+                  <div class="input-group">
+                    <input type="text" class="form-control" id="container-search" placeholder="Search container number...">
+                    <button class="btn btn-outline-secondary" type="button" onclick="searchContainers()">
+                      <i class="mdi mdi-magnify"></i>
+                    </button>
+                  </div>
+                  <div id="container-matches" class="mt-2"></div>
+                </div>
+              </div>
+
+              <div class="edit-section">
+                <div class="edit-section-title">Extracted Fields</div>
+                <div class="row g-3" id="dynamic-fields-container"></div>
+                <div class="row g-3 mt-2" id="custom-type-row" style="display:none;">
+                  <div class="col-12">
+                    <label class="field-label">Custom Document Type</label>
+                    <input type="text" class="form-control" id="field-custom_type" placeholder="Enter new document type name">
+                  </div>
+                </div>
+              </div>
+
+              <div class="edit-section">
+                <div class="edit-section-title">OCR Text</div>
+                <div class="ocr-text-box" id="modal-ocr-text">No text available</div>
+              </div>
+
+              <div class="d-flex gap-2 justify-content-end mt-4 pt-3 border-top">
+                <button type="button" class="btn-fail" onclick="markFailed()">
+                  <i class="mdi mdi-alert me-1"></i> Move to Failed
+                </button>
+                <button type="button" class="btn-save" onclick="saveDocument()">
+                  <i class="mdi mdi-content-save me-1"></i> Save & Complete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Viewer Modal -->
+  <div class="modal fade" id="pdf-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-fullscreen">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Document Viewer</h5>
+          <div class="ms-auto d-flex gap-2">
+            <a id="pdf-download-btn" class="btn btn-light btn-sm" download>
+              <i class="mdi mdi-download"></i> Download
+            </a>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+        </div>
+        <div class="modal-body p-0" style="height:80vh;">
+          <iframe id="pdf-frame" style="width:100%;height:100%;border:none;"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.26.0/dist/umd/supabase.min.js"></script>
+  <script>
+    // --- Config ---
+    const API_BASE = '/api/v1';
+    const API_KEY = 'ocr_test_key_123';
+
+    // Document types for selector
+    const DOC_TYPES = [
+      { value: 'pod', label: 'POD' },
+      { value: 'invoice', label: 'Invoice' },
+      { value: 'container_eir_in', label: 'Container EIR In' },
+      { value: 'container_eir_out', label: 'Container EIR Out' },
+      { value: 'chassis_eir_in', label: 'Chassis EIR In' },
+      { value: 'chassis_eir_out', label: 'Chassis EIR Out' },
+      { value: 'receipt', label: 'Receipt' },
+      { value: 'rate_confirmation', label: 'Rate Confirmation' },
+      { value: 'fuel_receipt', label: 'Fuel Receipt' },
+      { value: 'scale_ticket', label: 'Scale Ticket' },
+      { value: 'gate_ticket', label: 'Gate Ticket' },
+      { value: 'load_confirmation', label: 'Load Confirmation' },
+      { value: 'terminal_paperwork', label: 'Terminal Paperwork' },
+      { value: 'appointment_confirmation', label: 'Appointment Confirmation' },
+      { value: 'chassis_paperwork', label: 'Chassis Paperwork' },
+      { value: 'yard_ticket', label: 'Yard Ticket' },
+      { value: 'reference_sheet', label: 'Reference Sheet' },
+      { value: 'new', label: '+ New Type' },
+      { value: 'unknown', label: 'Unknown' },
+    ];
+
+    // Field definitions per document type
+    const DOC_FIELDS = {
+      pod: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-seal_number', label: 'Seal Number' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-vessel_voyage', label: 'Vessel / Voyage' },
+        { id: 'field-gate_in', label: 'Gate In' },
+        { id: 'field-gate_out', label: 'Gate Out' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      invoice: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-invoice_number', label: 'Invoice Number' },
+        { id: 'field-amount', label: 'Amount' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-time', label: 'Time' },
+        { id: 'field-company', label: 'Company' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      container_eir_in: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-chassis_number', label: 'Chassis Number' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-vessel_voyage', label: 'Vessel / Voyage' },
+        { id: 'field-gate_in', label: 'Gate In' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-seal_number', label: 'Seal Number' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      container_eir_out: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-chassis_number', label: 'Chassis Number' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-gate_out', label: 'Gate Out' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-seal_number', label: 'Seal Number' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      chassis_eir_in: [
+        { id: 'field-chassis_number', label: 'Chassis Number' },
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-gate_in', label: 'Gate In' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      chassis_eir_out: [
+        { id: 'field-chassis_number', label: 'Chassis Number' },
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-gate_out', label: 'Gate Out' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      receipt: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-receipt_number', label: 'Receipt Number' },
+        { id: 'field-amount', label: 'Amount' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-time', label: 'Time' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      rate_confirmation: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-reference_number', label: 'Reference Number' },
+        { id: 'field-rate', label: 'Rate' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-company', label: 'Company' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      fuel_receipt: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-fuel_type', label: 'Fuel Type' },
+        { id: 'field-amount', label: 'Amount' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-time', label: 'Time' },
+        { id: 'field-location', label: 'Location' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      scale_ticket: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-weight', label: 'Weight' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-time', label: 'Time' },
+        { id: 'field-location', label: 'Location' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      gate_ticket: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-time', label: 'Time' },
+        { id: 'field-gate_in', label: 'Gate In' },
+        { id: 'field-gate_out', label: 'Gate Out' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-chassis_number', label: 'Chassis Number' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      load_confirmation: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-load_number', label: 'Load Number' },
+        { id: 'field-reference_number', label: 'Reference Number' },
+        { id: 'field-pickup_location', label: 'Pickup Location' },
+        { id: 'field-delivery_location', label: 'Delivery Location' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-time', label: 'Time' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      terminal_paperwork: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-vessel_voyage', label: 'Vessel / Voyage' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-time', label: 'Time' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      appointment_confirmation: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-appointment_date', label: 'Appointment Date' },
+        { id: 'field-appointment_time', label: 'Appointment Time' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      chassis_paperwork: [
+        { id: 'field-chassis_number', label: 'Chassis Number' },
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-time', label: 'Time' },
+        { id: 'field-driver_name', label: 'Driver Name' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      yard_ticket: [
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-yard_location', label: 'Yard Location' },
+        { id: 'field-terminal', label: 'Terminal' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-time', label: 'Time' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      reference_sheet: [
+        { id: 'field-reference_number', label: 'Reference Number' },
+        { id: 'field-container_number', label: 'Container Number' },
+        { id: 'field-date', label: 'Date' },
+        { id: 'field-time', label: 'Time' },
+        { id: 'field-company', label: 'Company' },
+        { id: 'field-notes', label: 'Notes' },
+      ],
+      new: [],
+      unknown: [
+        { id: 'field-notes', label: 'Notes' },
+      ],
+    };
+
+    let currentDoc = null;
+    let modal = null;
+    let pdfModal = null;
+    let sortColumn = 'created_at';
+    let sortDir = 'desc';
+
+    // Virtual scrolling state
+    const ROW_HEIGHT = 56; // px per row
+    const BUFFER_SIZE = 10; // extra rows above/below
+    let allDocs = []; // store all docs for virtual scroll
+    let scrollContainer = null;
+
+    function renderVirtualTable(docs, scrollTop = 0) {
+      const tbody = document.getElementById('review-tbody');
+      if (!docs.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4"><div class="spinner mx-auto"></div></td></tr>`;
+        return;
+      }
+
+      const containerHeight = scrollContainer?.clientHeight || 600;
+      const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER_SIZE);
+      const endIndex = Math.min(docs.length, Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + BUFFER_SIZE);
+      const visibleCount = endIndex - startIndex;
+
+      // Create spacer for rows above
+      let html = `<tr style="height:${startIndex * ROW_HEIGHT}px;"><td colspan="7"></td></tr>`;
+
+      // Render visible rows
+      for (let i = startIndex; i < endIndex; i++) {
+        const doc = docs[i];
+        const statusBadge = getStatusBadge(doc.status);
+        const date = doc.created_at ? new Date(doc.created_at).toLocaleString() : 'N/A';
+        html += `
+          <tr>
+            <td>
+              <div class="filename-cell">
+                <i class="mdi mdi-file-pdf-box filename-icon"></i>
+                <span>${doc.filename || 'Unknown'}</span>
+              </div>
+            </td>
+            <td><span class="container-number">${doc.container_number || '—'}</span></td>
+            <td>${doc.company || '—'}</td>
+            <td><span class="doc-type-badge" onclick="openTypeSelector('${doc.job_id}', '${doc.document_type || ''}')">${doc.document_type || 'unknown'}</span></td>
+            <td>${statusBadge}</td>
+            <td>${date}</td>
+            <td style="width: 90px;">
+              <div class="d-flex gap-1 justify-content-center">
+                <button class="btn btn-sm action-btn btn-info" onclick="viewPdf('${doc.job_id}')" title="View PDF">
+                  <i class="mdi mdi-file-pdf-box"></i>
+                </button>
+                <button class="btn btn-sm action-btn btn-primary" onclick="viewDoc('${doc.job_id}')">
+                  <i class="mdi mdi-eye"></i>
+                </button>
+              </div>
+            </td>
+          </tr>`;
+      }
+
+      // Create spacer for rows below
+      html += `<tr style="height:${(docs.length - endIndex) * ROW_HEIGHT}px;"><td colspan="7"></td></tr>`;
+
+      tbody.innerHTML = html;
+    }
+
+    function toggleSort(column) {
+      if (sortColumn === column) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = column;
+        sortDir = 'asc';
+      }
+      updateSortIndicators();
+      // Re-sort and re-render without fetching
+      allDocs = sortDocs([...allDocs]);
+      const scrollTop = scrollContainer?.scrollTop || 0;
+      renderVirtualTable(allDocs, scrollTop);
+    }
+
+    function updateSortIndicators() {
+      document.querySelectorAll('th.sortable').forEach(th => {
+        const col = th.dataset.sort;
+        th.classList.toggle('sorted', col === sortColumn);
+        const icon = th.querySelector('.sort-icon');
+        icon.classList.remove('asc', 'desc');
+        if (col === sortColumn) {
+          icon.classList.add(sortDir);
+        }
+      });
+    }
+
+    function sortDocs(docs) {
+      return [...docs].sort((a, b) => {
+        let aVal = a[sortColumn] || '';
+        let bVal = b[sortColumn] || '';
+        if (sortColumn === 'created_at') {
+          aVal = new Date(aVal).getTime();
+          bVal = new Date(bVal).getTime();
+        }
+        if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+        if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    // --- Init ---
+    document.addEventListener('DOMContentLoaded', () => {
+      modal = new bootstrap.Modal(document.getElementById('doc-modal'));
+      pdfModal = new bootstrap.Modal(document.getElementById('pdf-modal'));
+
+      // Cleanup blob URLs and memory when doc modal closes
+      document.getElementById('doc-modal').addEventListener('hidden.bs.modal', () => {
+        const frame = document.getElementById('modal-pdf-frame');
+        if (frame && frame.dataset.blobUrl) {
+          URL.revokeObjectURL(frame.dataset.blobUrl);
+          frame.src = 'about:blank';
+          delete frame.dataset.blobUrl;
+        }
+        currentDoc = null;
+      });
+
+      // Cleanup PDF modal iframe on close
+      document.getElementById('pdf-modal').addEventListener('hidden.bs.modal', () => {
+        const frame = document.getElementById('pdf-frame');
+        if (frame) frame.src = 'about:blank';
+        if (currentPdfBlobUrl) {
+          URL.revokeObjectURL(currentPdfBlobUrl);
+          currentPdfBlobUrl = null;
+        }
+      });
+
+      // Initialize scroll container and virtual scroll
+      scrollContainer = document.getElementById('table-container');
+      scrollContainer.addEventListener('scroll', () => {
+        requestAnimationFrame(() => {
+          if (allDocs.length > 0) {
+            renderVirtualTable(allDocs, scrollContainer.scrollTop);
+          }
+        });
+      });
+
+      updateSortIndicators();
+      loadReviewDocs();
+      loadStats();
+
+      // Sidebar loader
+      const sidebarScript = document.createElement('script');
+      sidebarScript.src = '/sidebar.js';
+      document.body.appendChild(sidebarScript);
+    });
+
+    // --- API Helper ---
+    async function api(method, path, data = null) {
+      const options = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': API_KEY,
+        },
+      };
+      if (data) {
+        options.body = JSON.stringify(data);
+      }
+      const res = await fetch(API_BASE + path, options);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`API Error ${res.status}: ${text}`);
+      }
+      return res.json();
+    }
+
+    // --- Debounce ---
+    function debounce(fn, delay) {
+      let timer;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), delay);
+      };
+    }
+
+    // --- Load Stats ---
+    async function loadStats() {
+      const start = performance.now();
+      try {
+        const data = await api('GET', '/documents?limit=99999');
+        const parseTime = performance.now() - start;
+        const docs = data.documents || [];
+        const review = docs.filter(d => d.status === 'review').length;
+        const failed = docs.filter(d => d.status === 'failed').length;
+        const ocr = docs.filter(d => d.status === 'ocr').length;
+        const verified = docs.filter(d => d.status === 'verified').length;
+
+        document.getElementById('stat-review').textContent = review;
+        document.getElementById('stat-failed').textContent = failed;
+        document.getElementById('stat-completed').textContent = ocr;
+        document.getElementById('stat-total').textContent = verified;
+        console.log('loadStats:', { parseMs: parseTime.toFixed(0), total: docs.length });
+      } catch (e) {
+        console.error('Failed to load stats:', e);
+      }
+    }
+
+    // --- Load Documents ---
+    const debouncedLoadReviewDocs = debounce(loadReviewDocs, 200);
+
+    async function loadReviewDocs() {
+      const statusFilter = document.getElementById('status-filter').value;
+      const typeFilter = document.getElementById('type-filter').value;
+      const tbody = document.getElementById('review-tbody');
+
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4"><div class="spinner mx-auto"></div></td></tr>';
+
+      try {
+        let path = '/documents?limit=99999';
+        if (statusFilter !== 'all') {
+          path = '/documents?status_filter=' + statusFilter + '&limit=99999';
+        }
+        const data = await api('GET', path);
+        let docs = data.documents || [];
+
+        if (typeFilter) {
+          docs = docs.filter(d => d.document_type === typeFilter);
+        }
+
+        docs = sortDocs(docs);
+
+        document.getElementById('doc-count').textContent = docs.length + ' items';
+        allDocs = docs;
+
+        if (docs.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">
+                  <i class="mdi mdi-file-document-outline"></i>
+                  <h5>No documents found</h5>
+                  <p class="text-muted mb-0">Try adjusting your filters or check back later</p>
+                </div>
+              </td>
+            </tr>`;
+          return;
+        }
+
+        // Reset scroll and use virtual table
+        if (scrollContainer) {
+          scrollContainer.scrollTop = 0;
+        }
+        renderVirtualTable(docs, 0);
+      } catch (e) {
+        console.error('Load error:', e);
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger p-3">Error: ${e.message}</td></tr>`;
+      }
+    }
+
+    function getStatusBadge(status) {
+      const badges = {
+        pending: '<span class="badge-status badge-pending"><i class="mdi mdi-clock-outline me-1"></i>Pending</span>',
+        queued: '<span class="badge-status badge-queued"><i class="mdi mdi-progress-clock me-1"></i>Queued</span>',
+        processing: '<span class="badge-status badge-processing"><i class="mdi mdi-cog me-1"></i>Processing</span>',
+        ocr: '<span class="badge-status badge-processing"><i class="mdi mdi-text-recognition me-1"></i>OCR</span>',
+        verified: '<span class="badge-status badge-completed"><i class="mdi mdi-check-decagram me-1"></i>Verified</span>',
+        failed: '<span class="badge-status badge-failed"><i class="mdi mdi-alert me-1"></i>Failed</span>',
+        review: '<span class="badge-status badge-review"><i class="mdi mdi-clipboard-text me-1"></i>Review</span>',
+      };
+      return badges[status] || `<span class="badge-status badge-pending">${status}</span>`;
+    }
+
+    async function openTypeSelector(jobId, currentType) {
+      await viewDoc(jobId);
+    }
+
+    // --- View PDF ---
+    let currentPdfBlobUrl = null;
+    async function viewPdf(jobId) {
+      try {
+        const pdfUrl = API_BASE + '/documents/' + jobId + '/file';
+        const frame = document.getElementById('pdf-frame');
+        const downloadBtn = document.getElementById('pdf-download-btn');
+
+        const response = await fetch(pdfUrl, {
+          headers: { 'X-API-Key': API_KEY },
+        });
+
+        if (!response.ok) throw new Error('Failed to load document');
+
+        const blob = await response.blob();
+        // Revoke previous blob URL before creating new one
+        if (currentPdfBlobUrl) {
+          URL.revokeObjectURL(currentPdfBlobUrl);
+        }
+        currentPdfBlobUrl = URL.createObjectURL(blob);
+
+        frame.src = currentPdfBlobUrl;
+        downloadBtn.href = currentPdfBlobUrl;
+        downloadBtn.download = (currentDoc?.doc?.filename) || (jobId + '.pdf');
+
+        pdfModal.show();
+      } catch (e) {
+        console.error('PDF load error:', e);
+        alert('Failed to load document: ' + e.message);
+      }
+    }
+
+    // --- View Document ---
+    async function viewDoc(jobId) {
+      try {
+        currentDoc = await api('GET', `/document/${jobId}`);
+        const doc = currentDoc.document || currentDoc;
+        const fields = currentDoc.extracted_fields || [];
+
+        currentDoc.doc = doc;
+
+        document.getElementById('modal-filename').textContent = doc.filename || 'Unknown';
+        loadPdfPreview(jobId);
+
+        let docType = doc.document_type || 'unknown';
+        const knownType = DOC_TYPES.find(t => t.value === docType);
+        if (!knownType && docType) {
+          docType = 'new';
+          document.getElementById('field-custom_type').value = doc.document_type || '';
+        }
+
+        const typeSelect = document.getElementById('edit-document-type');
+        typeSelect.innerHTML = '<option value="">Select type...</option>' + DOC_TYPES.map(t =>
+          `<option value="${t.value}" ${(docType === t.value) ? 'selected' : ''}>${t.label}</option>`
+        ).join('');
+
+        buildDynamicFields(docType);
+
+        const fieldConfidenceMap = {};
+        fields.forEach(f => { fieldConfidenceMap[f.field_name] = f; });
+
+        const visibleFieldIds = document.querySelectorAll('#dynamic-fields-container input, #dynamic-fields-container textarea');
+        visibleFieldIds.forEach(input => {
+          const fieldName = input.id.replace('field-', '');
+          if (fieldConfidenceMap[fieldName]) {
+            input.value = fieldConfidenceMap[fieldName].field_value || '';
+            updateConfidenceBadge(fieldName, fieldConfidenceMap[fieldName].confidence);
+          }
+        });
+
+        if (doc.ocr_text) autoFillFromOcr(doc.ocr_text);
+
+        document.getElementById('modal-ocr-text').textContent = doc.ocr_text || 'No OCR text available';
+        document.getElementById('container-search').value = '';
+        document.getElementById('container-matches').innerHTML = '';
+
+        modal.show();
+      } catch (e) {
+        console.error('View error:', e);
+        alert('Failed to load document: ' + e.message);
+      }
+    }
+
+    function buildDynamicFields(docType) {
+      const container = document.getElementById('dynamic-fields-container');
+      const customTypeRow = document.getElementById('custom-type-row');
+      const fields = DOC_FIELDS[docType] || [];
+
+      customTypeRow.style.display = docType === 'new' ? 'flex' : 'none';
+
+      let html = '';
+      fields.forEach(field => {
+        html += `
+          <div class="col-md-6">
+            <label class="field-label">
+              <span>${field.label}</span>
+              <span id="conf-${field.id.replace('field-', '')}" class="badge bg-secondary confidence-badge">-</span>
+            </label>
+            <input type="text" class="form-control" id="${field.id}">
+          </div>
+        `;
+      });
+
+      if (docType !== 'new' && docType !== 'unknown' && !fields.find(f => f.id === 'field-notes')) {
+        html += `
+          <div class="col-12">
+            <label class="field-label">
+              <span>Notes</span>
+              <span id="conf-notes" class="badge bg-secondary confidence-badge">-</span>
+            </label>
+            <textarea class="form-control" id="field-notes" rows="2"></textarea>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+
+      const typeSelect = document.getElementById('edit-document-type');
+      typeSelect.onchange = () => buildDynamicFields(typeSelect.value);
+    }
+
+    function updateConfidenceBadge(fieldName, confidence) {
+      const badge = document.getElementById('conf-' + fieldName);
+      if (!badge) return;
+
+      if (confidence !== undefined && confidence !== null) {
+        const confPercent = Math.round(confidence * 100);
+        badge.textContent = confPercent + '%';
+        if (confPercent >= 80) {
+          badge.className = 'badge confidence-badge conf-high';
+        } else if (confPercent >= 50) {
+          badge.className = 'badge confidence-badge conf-medium';
+        } else {
+          badge.className = 'badge confidence-badge conf-low';
+        }
+      } else {
+        badge.textContent = '100%';
+        badge.className = 'badge confidence-badge conf-high';
+      }
+    }
+
+    async function loadPdfPreview(jobId) {
+      const frame = document.getElementById('modal-pdf-frame');
+      // Revoke any existing blob URL before creating new one
+      if (frame.dataset.blobUrl) {
+        URL.revokeObjectURL(frame.dataset.blobUrl);
+        delete frame.dataset.blobUrl;
+      }
+      try {
+        const response = await fetch(API_BASE + '/documents/' + jobId + '/file', {
+          headers: { 'X-API-Key': API_KEY },
+        });
+        if (response.ok) {
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          frame.src = blobUrl;
+          frame.dataset.blobUrl = blobUrl;
+        } else {
+          frame.srcdoc = '<div class="p-3 text-center text-muted">PDF not available</div>';
+        }
+      } catch (e) {
+        frame.srcdoc = '<div class="p-3 text-center text-muted">Failed to load PDF</div>';
+      }
+    }
+
+    function autoFillFromOcr(ocrText) {
+      const patterns = {
+        'container_number': /([A-Z]{4}[0-9]{7})/,
+        'chassis_number': /chassis[:\s]*([A-Z0-9]+)/i,
+        'seal_number': /seal[:\s]*([A-Z0-9]+)/i,
+        'terminal': /(?:terminal|from)[:\s]*([A-Za-z0-9\s]+?)(?:\n|,)/i,
+        'driver_name': /driver[:\s]*([A-Za-z\s]+?)(?:\n|,)/i,
+      };
+
+      Object.entries(patterns).forEach(([field, pattern]) => {
+        const match = ocrText.match(pattern);
+        if (match && match[1]) {
+          const input = document.getElementById('field-' + field);
+          const badge = document.getElementById('conf-' + field);
+          if (input && !input.value) {
+            input.value = match[1].trim();
+            if (badge) {
+              badge.textContent = '60%';
+              badge.className = 'badge confidence-badge conf-medium';
+            }
+          }
+        }
+      });
+    }
+
+    async function searchContainers() {
+      const query = document.getElementById('container-search').value.trim();
+      if (query.length < 2) {
+        alert('Enter at least 2 characters to search');
+        return;
+      }
+
+      const matchesDiv = document.getElementById('container-matches');
+      matchesDiv.innerHTML = '<div class="text-muted small"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div> Searching...</div>';
+
+      try {
+        const data = await api('GET', `/containers/search?q=${encodeURIComponent(query)}`);
+        if (!data.containers || data.containers.length === 0) {
+          matchesDiv.innerHTML = '<div class="text-muted small">No containers found</div>';
+          return;
+        }
+
+        matchesDiv.innerHTML = data.containers.map(c => `
+          <div class="card mt-1 p-2 border">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <strong>${c.container_number || 'N/A'}</strong>
+                <div class="small text-muted">${c.status || ''} ${c['Vessel/Voyage'] ? '| ' + c['Vessel/Voyage'] : ''}</div>
+              </div>
+              <button class="btn btn-sm btn-primary" onclick="selectContainer('${c.container_number}')">Use</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        matchesDiv.innerHTML = '<div class="text-danger small">Search failed</div>';
+      }
+    }
+
+    function selectContainer(containerNumber) {
+      document.getElementById('field-container_number').value = containerNumber;
+      document.getElementById('container-matches').innerHTML = '';
+      document.getElementById('container-search').value = containerNumber;
+    }
+
+    async function saveDocument() {
+      if (!currentDoc || !currentDoc.doc) return;
+
+      let docType = document.getElementById('edit-document-type').value;
+      if (docType === 'new') {
+        const customType = document.getElementById('field-custom_type').value.trim();
+        if (!customType) {
+          alert('Please enter a custom document type name');
+          return;
+        }
+        docType = customType.toLowerCase().replace(/\s+/g, '_');
+      }
+
+      const saveData = {
+        document_type: docType || undefined,
+        ocr_text: currentDoc.doc.ocr_text || undefined,
+      };
+
+      const visibleInputs = document.querySelectorAll('#dynamic-fields-container input, #dynamic-fields-container textarea');
+      visibleInputs.forEach(input => {
+        const fieldName = input.id.replace('field-', '');
+        if (fieldName !== 'custom_type' && input.value.trim()) {
+          saveData[fieldName] = input.value.trim();
+        }
+      });
+
+      try {
+        await api('POST', `/documents/${currentDoc.doc.job_id}/save`, saveData);
+        modal.hide();
+        loadReviewDocs();
+        loadStats();
+        alert('Document saved successfully');
+      } catch (e) {
+        console.error('Save error:', e);
+        alert('Failed to save: ' + e.message);
+      }
+    }
+
+    async function downloadPdf() {
+      if (!currentDoc || !currentDoc.doc) return;
+      const jobId = currentDoc.doc.job_id;
+      const filename = currentDoc.doc.filename || (jobId + '.pdf');
+
+      try {
+        const response = await fetch(API_BASE + '/documents/' + jobId + '/file', {
+          headers: { 'X-API-Key': API_KEY },
+        });
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      } catch (e) {
+        alert('Download failed: ' + e.message);
+      }
+    }
+
+    async function markFailed() {
+      const targetId = currentDoc && currentDoc.doc ? currentDoc.doc.job_id : null;
+      if (!targetId) return;
+
+      try {
+        await api('POST', `/documents/${targetId}/review`, { document_type: 'unknown' });
+        modal.hide();
+        loadReviewDocs();
+        loadStats();
+      } catch (e) {
+        console.error('Mark failed error:', e);
+        alert('Failed to update: ' + e.message);
+      }
+    }
+  </script>
+</body>
+</html>

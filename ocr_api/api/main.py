@@ -172,7 +172,7 @@ async def upload_document(
 
             # Mark original as parent (completed splitting)
             supabase.table("ocr_documents").update({
-                "status": "completed",
+                "status": "ocr",
                 "page_count": page_count,
             }).eq("job_id", job_id).execute()
 
@@ -240,6 +240,7 @@ async def get_status(
 
     return StatusResponse(
         job_id=doc["job_id"],
+        filename=doc.get("filename"),
         status=DocumentStatus(doc["status"]),
         document_type=doc.get("document_type"),
         confidence_score=doc.get("confidence_score"),
@@ -268,24 +269,46 @@ async def list_documents(
 
     result = query.execute()
 
+    if not result.data:
+        return DocumentListResponse(documents=[], total=0)
+
+    doc_ids = [doc["id"] for doc in result.data]
+
+    # Batch fetch all extracted fields for all documents
+    fields_result = supabase.table("ocr_extracted_fields").select("*").in_("document_id", doc_ids).execute()
+    fields_by_doc = {}
+    for f in fields_result.data:
+        doc_id = f["document_id"]
+        if doc_id not in fields_by_doc:
+            fields_by_doc[doc_id] = {}
+        fields_by_doc[doc_id][f["field_name"]] = f["field_value"]
+
+    # Get all container numbers and batch fetch companies
+    container_numbers = set()
+    for doc in result.data:
+        fields = fields_by_doc.get(doc["id"], {})
+        cn = fields.get("container_number")
+        if cn:
+            container_numbers.add(cn)
+
+    # Batch fetch containers
+    company_by_container = {}
+    if container_numbers:
+        containers_result = supabase.table("containers").select('container_number,"Company"').in_(
+            "container_number", list(container_numbers)
+        ).execute()
+        for c in containers_result.data:
+            company_by_container[c["container_number"]] = c.get("Company")
+
     documents = []
     for doc in result.data:
-        # Fetch extracted fields for this document
-        fields_result = supabase.table("ocr_extracted_fields").select("*").eq("document_id", doc["id"]).execute()
-        extracted_fields = {f["field_name"]: f["field_value"] for f in fields_result.data}
-
-        # Get container number and lookup company
+        extracted_fields = fields_by_doc.get(doc["id"], {})
         container_number = extracted_fields.get("container_number")
-        company = None
-        if container_number:
-            container_result = supabase.table("containers").select("Company").eq(
-                "container_number", container_number
-            ).execute()
-            if container_result.data:
-                company = container_result.data[0].get("Company")
+        company = company_by_container.get(container_number) if container_number else None
 
         documents.append(StatusResponse(
             job_id=doc["job_id"],
+            filename=doc.get("filename"),
             status=DocumentStatus(doc["status"]),
             document_type=doc.get("document_type"),
             confidence_score=doc.get("confidence_score"),
@@ -468,24 +491,45 @@ async def get_review_documents(
         .offset(offset)\
         .execute()
 
+    if not result.data:
+        return DocumentListResponse(documents=[], total=0)
+
+    doc_ids = [doc["id"] for doc in result.data]
+
+    # Batch fetch all extracted fields
+    fields_result = supabase.table("ocr_extracted_fields").select("*").in_("document_id", doc_ids).execute()
+    fields_by_doc = {}
+    for f in fields_result.data:
+        doc_id = f["document_id"]
+        if doc_id not in fields_by_doc:
+            fields_by_doc[doc_id] = {}
+        fields_by_doc[doc_id][f["field_name"]] = f["field_value"]
+
+    # Get all container numbers and batch fetch companies
+    container_numbers = set()
+    for doc in result.data:
+        fields = fields_by_doc.get(doc["id"], {})
+        cn = fields.get("container_number")
+        if cn:
+            container_numbers.add(cn)
+
+    company_by_container = {}
+    if container_numbers:
+        containers_result = supabase.table("containers").select('container_number,"Company"').in_(
+            "container_number", list(container_numbers)
+        ).execute()
+        for c in containers_result.data:
+            company_by_container[c["container_number"]] = c.get("Company")
+
     documents = []
     for doc in result.data:
-        # Fetch extracted fields
-        fields_result = supabase.table("ocr_extracted_fields").select("*").eq("document_id", doc["id"]).execute()
-        extracted_fields = {f["field_name"]: f["field_value"] for f in fields_result.data}
-
-        # Get container number and lookup company
+        extracted_fields = fields_by_doc.get(doc["id"], {})
         container_number = extracted_fields.get("container_number")
-        company = None
-        if container_number:
-            container_result = supabase.table("containers").select("Company").eq(
-                "container_number", container_number
-            ).execute()
-            if container_result.data:
-                company = container_result.data[0].get("Company")
+        company = company_by_container.get(container_number) if container_number else None
 
         documents.append(StatusResponse(
             job_id=doc["job_id"],
+            filename=doc.get("filename"),
             status=DocumentStatus(doc["status"]),
             document_type=doc.get("document_type"),
             confidence_score=doc.get("confidence_score"),
@@ -517,24 +561,45 @@ async def get_failed_documents(
         .offset(offset)\
         .execute()
 
+    if not result.data:
+        return DocumentListResponse(documents=[], total=0)
+
+    doc_ids = [doc["id"] for doc in result.data]
+
+    # Batch fetch all extracted fields
+    fields_result = supabase.table("ocr_extracted_fields").select("*").in_("document_id", doc_ids).execute()
+    fields_by_doc = {}
+    for f in fields_result.data:
+        doc_id = f["document_id"]
+        if doc_id not in fields_by_doc:
+            fields_by_doc[doc_id] = {}
+        fields_by_doc[doc_id][f["field_name"]] = f["field_value"]
+
+    # Get all container numbers and batch fetch companies
+    container_numbers = set()
+    for doc in result.data:
+        fields = fields_by_doc.get(doc["id"], {})
+        cn = fields.get("container_number")
+        if cn:
+            container_numbers.add(cn)
+
+    company_by_container = {}
+    if container_numbers:
+        containers_result = supabase.table("containers").select('container_number,"Company"').in_(
+            "container_number", list(container_numbers)
+        ).execute()
+        for c in containers_result.data:
+            company_by_container[c["container_number"]] = c.get("Company")
+
     documents = []
     for doc in result.data:
-        # Fetch extracted fields
-        fields_result = supabase.table("ocr_extracted_fields").select("*").eq("document_id", doc["id"]).execute()
-        extracted_fields = {f["field_name"]: f["field_value"] for f in fields_result.data}
-
-        # Get container number and lookup company
+        extracted_fields = fields_by_doc.get(doc["id"], {})
         container_number = extracted_fields.get("container_number")
-        company = None
-        if container_number:
-            container_result = supabase.table("containers").select("Company").eq(
-                "container_number", container_number
-            ).execute()
-            if container_result.data:
-                company = container_result.data[0].get("Company")
+        company = company_by_container.get(container_number) if container_number else None
 
         documents.append(StatusResponse(
             job_id=doc["job_id"],
+            filename=doc.get("filename"),
             status=DocumentStatus(doc["status"]),
             document_type=doc.get("document_type"),
             confidence_score=doc.get("confidence_score"),
@@ -616,6 +681,23 @@ class DocumentSaveRequest(BaseModel):
     gate_out: Optional[str] = None
     notes: Optional[str] = None
     ocr_text: Optional[str] = None
+    # Additional fields for various document types
+    invoice_number: Optional[str] = None
+    amount: Optional[str] = None
+    company: Optional[str] = None
+    receipt_number: Optional[str] = None
+    reference_number: Optional[str] = None
+    rate: Optional[str] = None
+    fuel_type: Optional[str] = None
+    location: Optional[str] = None
+    weight: Optional[str] = None
+    load_number: Optional[str] = None
+    pickup_location: Optional[str] = None
+    delivery_location: Optional[str] = None
+    appointment_date: Optional[str] = None
+    appointment_time: Optional[str] = None
+    yard_location: Optional[str] = None
+    time: Optional[str] = None
 
 
 @app.post("/api/v1/documents/{job_id}/save")
@@ -636,7 +718,7 @@ async def save_document_review(
 
     # Update document
     update_data = {
-        "status": "completed",
+        "status": "verified",
         "document_type": request.document_type,
         "ocr_text": request.ocr_text,
     }
@@ -653,6 +735,22 @@ async def save_document_review(
         "gate_in": request.gate_in,
         "gate_out": request.gate_out,
         "notes": request.notes,
+        "invoice_number": request.invoice_number,
+        "amount": request.amount,
+        "company": request.company,
+        "receipt_number": request.receipt_number,
+        "reference_number": request.reference_number,
+        "rate": request.rate,
+        "fuel_type": request.fuel_type,
+        "location": request.location,
+        "weight": request.weight,
+        "load_number": request.load_number,
+        "pickup_location": request.pickup_location,
+        "delivery_location": request.delivery_location,
+        "appointment_date": request.appointment_date,
+        "appointment_time": request.appointment_time,
+        "yard_location": request.yard_location,
+        "time": request.time,
     }
 
     # Remove None values

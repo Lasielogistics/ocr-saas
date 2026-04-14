@@ -23,6 +23,7 @@ class UploadResponse(BaseModel):
 class StatusResponse(BaseModel):
     """Response model for job status."""
     job_id: str
+    filename: Optional[str] = None
     status: DocumentStatus
     document_type: Optional[str] = None
     confidence_score: Optional[float] = None

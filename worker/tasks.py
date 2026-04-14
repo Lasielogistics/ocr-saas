@@ -71,7 +71,7 @@ def process_document(self, job_id: str, customer_id: str, file_path: str) -> dic
 
         # Update with results
         update_data = {
-            "status": "completed",
+            "status": "ocr",
             "document_type": result["document_type"],
             "ocr_text": result["ocr_text"],
             "page_count": result["page_count"],

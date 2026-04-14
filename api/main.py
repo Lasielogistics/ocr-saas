@@ -333,7 +333,7 @@ from apm_client import apm_client, APMApiError
 async def apm_health() -> dict:
     """Verify APM API connectivity"""
     try:
-        token = apm_client._get_token()
+        apm_client._get_termpoint_jwt()
         return {"success": True, "status": "connected", "terminals": ["SEGOT", "USLAX", "USMOB", "USPEB", "ITVDL"]}
     except APMApiError as e:
         return {"success": False, "status": "error", "error": str(e)}

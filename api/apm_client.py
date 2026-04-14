@@ -43,8 +43,8 @@ class APMClient:
     """Client for APM Terminals TERMPoint API using two-step auth."""
 
     # Auth endpoints
-    MAERSK_HOST = os.getenv("MAERSK_HOST", "https://api-stage.maersk.com")
-    APM_HOST = os.getenv("APM_HOST", "https://api-stage.apmterminals.com")
+    MAERSK_HOST = os.getenv("MAERSK_HOST", "https://api.maersk.com")
+    APM_HOST = os.getenv("APM_HOST", "https://api.apmterminals.com")
 
     # Credentials
     ADMIRAL_KEY = os.getenv("ADMIRAL_CONSUMER_KEY", "")
@@ -58,9 +58,15 @@ class APMClient:
         self._forgerock_expires_at: float = 0
         self._termpoint_jwt: Optional[str] = None
         self._termpoint_jwt_expires_at: float = 0
+        # Track if we're using production auth (no ForgeRock needed)
+        self._production_auth = "api-stage" not in self.APM_HOST
 
     def _get_forgerock_token(self) -> str:
         """Step 1: Get Maersk OAuth / ForgeRock token."""
+        # Production mode: ForgeRock token may not be needed
+        if self._production_auth and not self.FORGEROCK_TOKEN and not self.ADMIRAL_KEY:
+            return ""
+
         # Use pre-configured token if available (bypasses Maersk OAuth)
         if self.FORGEROCK_TOKEN:
             self._forgerock_token = self.FORGEROCK_TOKEN
@@ -108,9 +114,11 @@ class APMClient:
         url = f"{self.APM_HOST}/termpoint-tms/api/Login/AuthenticateUser"
         headers = {
             "Consumer-Key": self.APIGEE_KEY,
-            "Authorization": f"Bearer {forgerock}",
             "Content-Type": "application/json",
         }
+        if forgerock:
+            headers["Authorization"] = f"Bearer {forgerock}"
+
         payload = {"authenticationKey": ""}
 
         with httpx.Client(timeout=30) as client:
@@ -136,13 +144,16 @@ class APMClient:
 
     def _headers(self) -> dict:
         """Build headers for authenticated API requests."""
-        return {
+        headers = {
             "Consumer-Key": self.APIGEE_KEY,
-            "Authorization": f"Bearer {self._get_forgerock_token()}",
             "Termpoint-JWT": f"JWT {self._get_termpoint_jwt()}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
+        forgerock = self._get_forgerock_token()
+        if forgerock:
+            headers["Authorization"] = f"Bearer {forgerock}"
+        return headers
 
     def _request(self, method: str, path: str, **kwargs) -> dict:
         """Make authenticated API request."""

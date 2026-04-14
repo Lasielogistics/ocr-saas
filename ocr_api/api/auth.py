@@ -32,7 +32,8 @@ def verify_api_key(api_key: str) -> str:
     # Check against all customer configs
     for customer_id in SupabaseClientFactory.list_customers():
         config = SupabaseClientFactory.get_config(customer_id)
-        if config.api_key_hash == api_key_hash:
+        config_hash = config.get('api_key_hash', '') if isinstance(config, dict) else getattr(config, 'api_key_hash', '')
+        if config_hash == api_key_hash:
             return customer_id
 
     raise HTTPException(

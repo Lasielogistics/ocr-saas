@@ -1,6 +1,44 @@
-version: '3.8'
-
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tms-postgres
+    environment:
+      POSTGRES_USER: tms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tms_secret_password}
+      POSTGRES_DB: tms_main
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /data/backups/postgres:/backups
+    ports:
+      - "5432:5432"
+    networks:
+      - tms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tms"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  postgrest:
+    image: postgrest/postgrest:v12.0.2
+    container_name: tms-postgrest
+    ports:
+      - "5433:3000"
+    environment:
+      PGRST_DB_URI: postgresql://tms:tms_secret_password@tms-postgres:5432/tms_main
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:-supersecretkey123}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET:-supersecretkey123}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tms-network
+    restart: unless-stopped
+
   ui:
     build: ../ui
     container_name: tms-ui
@@ -53,6 +91,11 @@ services:
       - redis_data:/data
     networks:
       - tms-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   ocr_api:
@@ -66,8 +109,10 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - CUSTOMER_CONFIG_PATH=/app/shared/customers.json
+      - DATABASE_URL=postgresql://tms:tms_secret_password@tms-postgres:5432/tms_main
     depends_on:
       - redis
+      - postgres
     networks:
       - tms-network
     restart: unless-stopped
@@ -81,8 +126,10 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - CUSTOMER_CONFIG_PATH=/app/shared/customers.json
+      - DATABASE_URL=postgresql://tms:tms_secret_password@tms-postgres:5432/tms_main
     depends_on:
       - redis
+      - postgres
     networks:
       - tms-network
     restart: unless-stopped
@@ -173,3 +220,4 @@ networks:
 
 volumes:
   redis_data:
+  postgres_data:
