@@ -257,7 +257,7 @@
       padding: 0.25rem 0.75rem;
       border-radius: 20px;
     }
-    .review-table { margin: 0; table-layout: fixed; width: 100%; }
+    .review-table { margin: 0; table-layout: fixed; width: 100%; border-collapse: collapse; }
     .review-table thead th {
       background: var(--gray-50);
       color: var(--gray-600);
@@ -612,17 +612,17 @@
         </span>
         <span class="table-count" id="doc-count">0 items</span>
       </div>
-      <div class="table-responsive" id="table-container" style="flex: 1; overflow-y: auto; min-height: 0;">
+      <div class="table-responsive" id="table-container" style="flex: 1; overflow-y: auto; overflow-x: auto; min-height: 0; width: 100%;">
         <table class="table review-table">
           <thead>
             <tr>
-              <th class="sortable" data-sort="filename" onclick="toggleSort('filename')" style="width: 25%;">Document <span class="sort-icon"></span></th>
-              <th class="sortable" data-sort="container_number" onclick="toggleSort('container_number')" style="width: 15%;">Container # <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="filename" onclick="toggleSort('filename')" style="width: 26%;">Document <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="container_number" onclick="toggleSort('container_number')" style="width: 14%;">Container # <span class="sort-icon"></span></th>
               <th class="sortable" data-sort="company" onclick="toggleSort('company')" style="width: 15%;">Customer <span class="sort-icon"></span></th>
-              <th class="sortable" data-sort="document_type" onclick="toggleSort('document_type')" style="width: 15%;">Type <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="document_type" onclick="toggleSort('document_type')" style="width: 14%;">Type <span class="sort-icon"></span></th>
               <th class="sortable" data-sort="status" onclick="toggleSort('status')" style="width: 10%;">Status <span class="sort-icon"></span></th>
-              <th class="sortable" data-sort="created_at" onclick="toggleSort('created_at')" style="width: 15%;">Date <span class="sort-icon"></span></th>
-              <th style="width: 90px;">Actions</th>
+              <th class="sortable" data-sort="created_at" onclick="toggleSort('created_at')" style="width: 13%;">Date <span class="sort-icon"></span></th>
+              <th style="width: 8%;">Actions</th>
             </tr>
           </thead>
           <tbody id="review-tbody">
