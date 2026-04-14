@@ -1107,19 +1107,14 @@
     async function loadStats() {
       const start = performance.now();
       try {
-        const data = await api('GET', '/documents?limit=99999');
+        const data = await api('GET', '/documents/stats');
         const parseTime = performance.now() - start;
-        const docs = data.documents || [];
-        const review = docs.filter(d => d.status === 'review').length;
-        const failed = docs.filter(d => d.status === 'failed').length;
-        const ocr = docs.filter(d => d.status === 'ocr').length;
-        const verified = docs.filter(d => d.status === 'verified').length;
 
-        document.getElementById('stat-review').textContent = review;
-        document.getElementById('stat-failed').textContent = failed;
-        document.getElementById('stat-completed').textContent = ocr;
-        document.getElementById('stat-total').textContent = verified;
-        console.log('loadStats:', { parseMs: parseTime.toFixed(0), total: docs.length });
+        document.getElementById('stat-review').textContent = data.review;
+        document.getElementById('stat-failed').textContent = data.failed;
+        document.getElementById('stat-completed').textContent = data.ocr;
+        document.getElementById('stat-total').textContent = data.verified;
+        console.log('loadStats:', { parseMs: parseTime.toFixed(0), total: data.total });
       } catch (e) {
         console.error('Failed to load stats:', e);
       }

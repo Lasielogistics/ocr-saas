@@ -62,6 +62,34 @@ async def health_check():
     return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
 
 
+class StatsResponse(BaseModel):
+    """Response for document stats endpoint."""
+    review: int
+    failed: int
+    ocr: int
+    verified: int
+    total: int
+
+
+@app.get("/api/v1/documents/stats", response_model=StatsResponse)
+async def get_document_stats(
+    customer_id: str = Depends(get_current_customer),
+):
+    """Get document counts by status - lightweight endpoint for dashboard."""
+    supabase = SupabaseClientFactory.get_client(customer_id)
+
+    # Get counts per status using a single query with group by
+    result = supabase.table("ocr_documents").select("status").execute()
+
+    counts = {"review": 0, "failed": 0, "ocr": 0, "verified": 0, "total": len(result.data)}
+    for doc in result.data:
+        status = doc.get("status")
+        if status in counts:
+            counts[status] += 1
+
+    return StatsResponse(**counts)
+
+
 class UploadResponse(BaseModel):
     job_id: str
     status: DocumentStatus
