@@ -119,7 +119,7 @@ class APMClient:
         if forgerock:
             headers["Authorization"] = f"Bearer {forgerock}"
 
-        payload = {"authenticationKey": ""}
+        payload = {"authenticationKey": None}
 
         with httpx.Client(timeout=30) as client:
             response = client.post(url, json=payload, headers=headers)

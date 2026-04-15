@@ -888,6 +888,69 @@ async def save_document_review(
     return {"success": True, "message": f"Document {job_id} saved"}
 
 
+@app.patch("/api/v1/documents/{job_id}/fields")
+async def save_document_fields(
+    job_id: str,
+    request: DocumentSaveRequest,
+    customer_id: str = Depends(get_current_customer),
+):
+    """Save document extracted fields without changing status."""
+    supabase = SupabaseClientFactory.get_client(customer_id)
+
+    # Check document exists
+    result = supabase.table("ocr_documents").select("id").eq("job_id", job_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    doc_id = result.data[0]["id"]
+
+    # Save extracted fields (no status change)
+    fields_to_save = {
+        "container_number": request.container_number,
+        "chassis_number": request.chassis_number,
+        "terminal": request.terminal,
+        "seal_number": request.seal_number,
+        "vessel_voyage": request.vessel_voyage,
+        "driver_name": request.driver_name,
+        "gate_in": request.gate_in,
+        "gate_out": request.gate_out,
+        "notes": request.notes,
+        "invoice_number": request.invoice_number,
+        "amount": request.amount,
+        "company": request.company,
+        "receipt_number": request.receipt_number,
+        "reference_number": request.reference_number,
+        "rate": request.rate,
+        "fuel_type": request.fuel_type,
+        "location": request.location,
+        "weight": request.weight,
+        "load_number": request.load_number,
+        "pickup_location": request.pickup_location,
+        "delivery_location": request.delivery_location,
+        "appointment_date": request.appointment_date,
+        "appointment_time": request.appointment_time,
+        "yard_location": request.yard_location,
+        "time": request.time,
+    }
+
+    # Remove None values
+    fields_to_save = {k: v for k, v in fields_to_save.items() if v is not None}
+
+    # Delete existing fields for this document
+    supabase.table("ocr_extracted_fields").delete().eq("document_id", doc_id).execute()
+
+    # Insert new fields
+    for field_name, field_value in fields_to_save.items():
+        supabase.table("ocr_extracted_fields").insert([{
+            "document_id": doc_id,
+            "field_name": field_name,
+            "field_value": str(field_value),
+            "confidence": 1.0,
+        }]).execute()
+
+    return {"success": True, "message": f"Fields for {job_id} saved"}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=9000)

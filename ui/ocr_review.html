@@ -776,8 +776,11 @@
                 <button type="button" class="btn-fail" onclick="markFailed()">
                   <i class="mdi mdi-alert me-1"></i> Move to Failed
                 </button>
+                <button type="button" class="btn-save" onclick="saveFieldsOnly()">
+                  <i class="mdi mdi-content-save me-1"></i> Save
+                </button>
                 <button type="button" class="btn-save" onclick="saveDocument()">
-                  <i class="mdi mdi-content-save me-1"></i> Save & Complete
+                  <i class="mdi mdi-content-save-check me-1"></i> Save & Complete
                 </button>
               </div>
             </div>
@@ -1597,6 +1600,30 @@
       } catch (e) {
         console.error('Save error:', e);
         alert('Failed to save: ' + e.message);
+      }
+    }
+
+    async function saveFieldsOnly() {
+      if (!currentDoc || !currentDoc.doc) return;
+
+      const saveData = {};
+
+      const visibleInputs = document.querySelectorAll('#dynamic-fields-container input, #dynamic-fields-container textarea');
+      visibleInputs.forEach(input => {
+        const fieldName = input.id.replace('field-', '');
+        if (fieldName !== 'custom_type' && input.value.trim()) {
+          saveData[fieldName] = input.value.trim();
+        }
+      });
+
+      try {
+        await api('PATCH', `/documents/${currentDoc.doc.job_id}/fields`, saveData);
+        loadReviewDocs();
+        loadStats();
+        alert('Fields saved');
+      } catch (e) {
+        console.error('Save fields error:', e);
+        alert('Failed to save fields: ' + e.message);
       }
     }
 
