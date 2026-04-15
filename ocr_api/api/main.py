@@ -72,6 +72,14 @@ class StatsResponse(BaseModel):
     linked: int
     unlinked: int
     linked_percent: float
+    # Field extraction metrics for key fields
+    field_date: int = 0
+    field_time: int = 0
+    field_terminal: int = 0
+    field_license_plate: int = 0
+    field_container: int = 0
+    field_chassis: int = 0
+    field_complete: int = 0  # docs with all 6 fields
 
 
 @app.get("/api/v1/documents/stats", response_model=StatsResponse)
@@ -120,6 +128,38 @@ async def get_document_stats(
 
     linked_percent = (linked / counts["total"] * 100) if counts["total"] > 0 else 0.0
 
+    # Field extraction metrics - count docs with each key field
+    field_counts = {"date": 0, "time": 0, "terminal": 0, "license_plate": 0, "container_number": 0, "chassis_number": 0}
+    field_complete = 0
+
+    # Build a map of document_id -> set of field names extracted
+    fields_by_doc = {}
+    if doc_ids:
+        for f in fields_result.data:
+            doc_id = f["document_id"]
+            if doc_id not in fields_by_doc:
+                fields_by_doc[doc_id] = set()
+            if f["field_value"]:
+                fields_by_doc[doc_id].add(f["field_name"])
+
+    # Key fields to track
+    key_field_names = ["date", "time", "terminal", "license_plate", "container_number", "chassis_number"]
+
+    # Count docs with each field and complete set
+    for doc in result.data:
+        doc_uuid = doc["id"]
+        doc_fields = fields_by_doc.get(doc_uuid, set())
+
+        has_all_6 = True
+        for fname in key_field_names:
+            if fname in doc_fields:
+                field_counts[fname] += 1
+            else:
+                has_all_6 = False
+
+        if has_all_6:
+            field_complete += 1
+
     return StatsResponse(
         review=counts["review"],
         failed=counts["failed"],
@@ -129,6 +169,13 @@ async def get_document_stats(
         linked=linked,
         unlinked=unlinked,
         linked_percent=round(linked_percent, 1),
+        field_date=field_counts["date"],
+        field_time=field_counts["time"],
+        field_terminal=field_counts["terminal"],
+        field_license_plate=field_counts["license_plate"],
+        field_container=field_counts["container_number"],
+        field_chassis=field_counts["chassis_number"],
+        field_complete=field_complete,
     )
 
 

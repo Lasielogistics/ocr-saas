@@ -219,6 +219,7 @@ services:
     container_name: tms-playwright
     ports:
       - "6080:6080"
+      - "5900:5900"
       - "9222:9222"
     volumes:
       - /data/projects/tms/playwright:/app

@@ -99,13 +99,13 @@
     /* Stats Cards */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
-    @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 1400px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr; } }
     .stat-card {
       background: white;
       border-radius: 16px;
@@ -131,6 +131,15 @@
     .stat-card.total::before { background: linear-gradient(90deg, var(--info), #60a5fa); }
     .stat-card.linked::before { background: linear-gradient(90deg, var(--primary), var(--primary-light)); }
     .stat-card.linked .stat-card-icon { background: #e0e7ff; color: var(--primary); }
+    .stat-card.fields::before { background: linear-gradient(90deg, #6366f1, #818cf8); }
+    .stat-card.fields .stat-card-icon { background: #e0e7ff; color: #6366f1; }
+    .stat-card.fields { grid-column: span 1; }
+    .field-extraction-bars { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+    .field-bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
+    .field-name { width: 55px; color: #64748b; flex-shrink: 0; }
+    .field-bar { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+    .field-bar-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #818cf8); border-radius: 4px; transition: width 0.3s; }
+    .field-count { width: 35px; text-align: right; color: #475569; font-weight: 500; flex-shrink: 0; }
     .stat-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 24px rgba(0,0,0,0.08);
@@ -581,6 +590,20 @@
         </div>
         <div class="stat-card-value" id="stat-linked-percent">0%</div>
         <div class="stat-card-trend"><span id="stat-linked">0</span> linked / <span id="stat-unlinked">0</span> unlinked</div>
+      </div>
+      <div class="stat-card fields">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Field Extraction</span>
+          <div class="stat-card-icon"><i class="mdi mdi-format-list-bulleted"></i></div>
+        </div>
+        <div class="field-extraction-bars" id="field-extraction-bars">
+          <div class="field-bar-row"><span class="field-name">Date</span><div class="field-bar"><div class="field-bar-fill" id="bar-date" style="width:0%"></div></div><span class="field-count" id="stat-field-date">0</span></div>
+          <div class="field-bar-row"><span class="field-name">Time</span><div class="field-bar"><div class="field-bar-fill" id="bar-time" style="width:0%"></div></div><span class="field-count" id="stat-field-time">0</span></div>
+          <div class="field-bar-row"><span class="field-name">Terminal</span><div class="field-bar"><div class="field-bar-fill" id="bar-terminal" style="width:0%"></div></div><span class="field-count" id="stat-field-terminal">0</span></div>
+          <div class="field-bar-row"><span class="field-name">License</span><div class="field-bar"><div class="field-bar-fill" id="bar-license_plate" style="width:0%"></div></div><span class="field-count" id="stat-field-license_plate">0</span></div>
+          <div class="field-bar-row"><span class="field-name">Container</span><div class="field-bar"><div class="field-bar-fill" id="bar-container" style="width:0%"></div></div><span class="field-count" id="stat-field-container">0</span></div>
+          <div class="field-bar-row"><span class="field-name">Chassis</span><div class="field-bar"><div class="field-bar-fill" id="bar-chassis" style="width:0%"></div></div><span class="field-count" id="stat-field-chassis">0</span></div>
+        </div>
       </div>
     </div>
 
@@ -1137,6 +1160,23 @@
         document.getElementById('stat-linked-percent').textContent = data.linked_percent + '%';
         document.getElementById('stat-linked').textContent = data.linked;
         document.getElementById('stat-unlinked').textContent = data.unlinked;
+
+        // Field extraction bars
+        const total = data.total || 1;
+        const fieldData = [
+          { id: 'field-date', barId: 'bar-date', value: data.field_date },
+          { id: 'field-time', barId: 'bar-time', value: data.field_time },
+          { id: 'field-terminal', barId: 'bar-terminal', value: data.field_terminal },
+          { id: 'field-license_plate', barId: 'bar-license_plate', value: data.field_license_plate },
+          { id: 'field-container', barId: 'bar-container', value: data.field_container },
+          { id: 'field-chassis', barId: 'bar-chassis', value: data.field_chassis },
+        ];
+        fieldData.forEach(f => {
+          const el = document.getElementById(f.id);
+          const bar = document.getElementById(f.barId);
+          if (el) el.textContent = f.value;
+          if (bar) bar.style.width = Math.round((f.value / total) * 100) + '%';
+        });
         console.log('loadStats:', { parseMs: parseTime.toFixed(0), total: data.total, linked: data.linked_percent + '%' });
       } catch (e) {
         console.error('Failed to load stats:', e);

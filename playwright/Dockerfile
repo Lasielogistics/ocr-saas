@@ -1,43 +1,31 @@
-FROM node:20-alpine
+FROM node:20-slim
 
-RUN apk update && apk add --no-cache \
-    chromium \
-    chromium-chromedriver \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    udev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xvfb \
+    x11vnc \
     novnc \
     websockify \
-    tigervnc \
-    tigervnc-doc \
-    xvfb \
-    python3
-
-ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV DISPLAY=:99
+    python3 \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY package.json ./
-RUN npm install
+RUN npm install && npx playwright install chromium --with-deps
 
 COPY . .
 
 EXPOSE 6080 5900
 
 CMD ["sh", "-c", "\
-Xvfb :99 -geometry 1920x1080 -depth 24 &>/dev/null; \
-vncconfig -display :99 &>/dev/null; \
-chromium --headless --no-sandbox --disable-gpu --remote-debugging-port=9222 &>/dev/null & \
+Xvfb :99 -screen 0 1920x1080x24 & \
 sleep 2 && \
-cd /usr/share/novnc && python3 -m http.server 6080 &>/dev/null & \
-websockify --idle-timeout=3600 5900 localhost:5999 &>/dev/null & \
+x11vnc -display :99 -nopw -forever -shared -rfbport 5900 & \
 sleep 2 && \
-echo 'noVNC ready at http://localhost:6080/vnc.html?host=localhost&port=5900' && \
+cd /usr/share/novnc && python3 -m http.server 6080 & \
+websockify --idle-timeout=3600 9222 localhost:5900 & \
+sleep 2 && \
+echo 'noVNC ready at http://localhost:6080/vnc.html?host=localhost&port=9222' && \
 tail -f /dev/null"]
