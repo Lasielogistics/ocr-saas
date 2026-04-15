@@ -4,22 +4,25 @@
 
 ### Completed Today
 
-1. **Sticky column headers** - Added `position: sticky; top: 0; z-index: 10` to table header cells so they stay visible while scrolling. Also added bottom border via `::after`.
+1. **Fixed column widths** - Adjusted column percentages to sum exactly to 100%, changed Actions column from 90px to 8%, added border-collapse for consistent sizing
 
-2. **Fixed column widths** - Added `table-layout: fixed` and explicit width percentages to each column header to prevent column widths from changing during virtual scroll re-renders.
+2. **Added lightweight stats API** - New `/api/v1/documents/stats` endpoint returns counts by status without loading all documents into memory
 
-3. **Compact action buttons** - Changed action buttons to use flexbox with `gap-1`, centered in a narrower 90px column.
+3. **Fixed frontend stats loading** - OCR review page now uses efficient stats endpoint instead of loading 99999 documents
 
-4. **Pushed to git** - Committed all changes to master branch.
+4. **Pushed to git** - Committed all changes
 
-### Pending Tasks
+### Root Cause of Chrome Crash
+The `loadStats()` function was requesting `limit=99999` documents just to count statuses. With 1338+ documents, this caused memory issues that crashed Chrome.
 
-1. **Verify column widths don't shift** - Need to test if `table-layout: fixed` actually solved the column shifting issue during scroll.
+### Fix Applied
+- New API endpoint `/api/v1/documents/stats` returns `{review, failed, ocr, verified, total}` in one lightweight query
+- Frontend now calls this endpoint instead of loading all documents
 
 ### Key Files
 
 - `/data/projects/tms/ui/ocr_review.html` - Main UI file with virtual scrolling and filters
-- `/data/projects/tms/ocr_api/api/main.py` - API endpoints
+- `/data/projects/tms/ocr_api/api/main.py` - API endpoints (stats added at line 74)
 - `/data/projects/tms/worker/tasks.py` - Celery worker sets status to "ocr" after processing
 - `/data/projects/tms/shared/models.py` - DocumentStatus enum (OCR, VERIFIED, REVIEW, FAILED)
 

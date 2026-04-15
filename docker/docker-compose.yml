@@ -214,6 +214,23 @@ services:
       - tms-network
     restart: unless-stopped
 
+  playwright:
+    build: ../playwright
+    container_name: tms-playwright
+    ports:
+      - "6080:6080"
+      - "9222:9222"
+    volumes:
+      - /data/projects/tms/playwright:/app
+    environment:
+      - BASE_URL=http://tms-ui:80
+      - CI=true
+    networks:
+      - tms-network
+    depends_on:
+      - ui
+    restart: unless-stopped
+
 networks:
   tms-network:
     driver: bridge

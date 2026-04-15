@@ -1,0 +1,16 @@
+{
+  "name": "tms-playwright",
+  "version": "1.0.0",
+  "description": "Playwright browser automation for TMS",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "codegen": "playwright codegen",
+    "show-report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

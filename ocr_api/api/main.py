@@ -69,6 +69,9 @@ class StatsResponse(BaseModel):
     ocr: int
     verified: int
     total: int
+    linked: int
+    unlinked: int
+    linked_percent: float
 
 
 @app.get("/api/v1/documents/stats", response_model=StatsResponse)
@@ -78,16 +81,55 @@ async def get_document_stats(
     """Get document counts by status - lightweight endpoint for dashboard."""
     supabase = SupabaseClientFactory.get_client(customer_id)
 
-    # Get counts per status using a single query with group by
-    result = supabase.table("ocr_documents").select("status").execute()
+    # Get all documents with their fields
+    result = supabase.table("ocr_documents").select("id,job_id,status").execute()
 
     counts = {"review": 0, "failed": 0, "ocr": 0, "verified": 0, "total": len(result.data)}
-    for doc in result.data:
-        status = doc.get("status")
-        if status in counts:
-            counts[status] += 1
+    linked = 0
+    unlinked = 0
 
-    return StatsResponse(**counts)
+    # Get extracted fields to check container_number
+    doc_ids = [doc["id"] for doc in result.data]
+    if doc_ids:
+        fields_result = supabase.table("ocr_extracted_fields").select("document_id,field_name,field_value").in_(
+            "document_id", doc_ids
+        ).execute()
+
+        # Build a map of document_id (UUID) -> container_number
+        container_by_doc = {}
+        for f in fields_result.data:
+            if f["field_name"] == "container_number" and f["field_value"]:
+                container_by_doc[f["document_id"]] = f["field_value"]
+
+        # Count linked vs unlinked
+        for doc in result.data:
+            status = doc.get("status")
+            if status in counts:
+                counts[status] += 1
+
+            doc_uuid = doc["id"]
+            if doc_uuid in container_by_doc and container_by_doc[doc_uuid]:
+                linked += 1
+            else:
+                unlinked += 1
+    else:
+        for doc in result.data:
+            status = doc.get("status")
+            if status in counts:
+                counts[status] += 1
+
+    linked_percent = (linked / counts["total"] * 100) if counts["total"] > 0 else 0.0
+
+    return StatsResponse(
+        review=counts["review"],
+        failed=counts["failed"],
+        ocr=counts["ocr"],
+        verified=counts["verified"],
+        total=counts["total"],
+        linked=linked,
+        unlinked=unlinked,
+        linked_percent=round(linked_percent, 1),
+    )
 
 
 class UploadResponse(BaseModel):

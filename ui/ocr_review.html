@@ -99,12 +99,13 @@
     /* Stats Cards */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
-    @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }
     .stat-card {
       background: white;
       border-radius: 16px;
@@ -128,6 +129,8 @@
     .stat-card.failed::before { background: linear-gradient(90deg, var(--danger), #f87171); }
     .stat-card.completed::before { background: linear-gradient(90deg, var(--success), #34d399); }
     .stat-card.total::before { background: linear-gradient(90deg, var(--info), #60a5fa); }
+    .stat-card.linked::before { background: linear-gradient(90deg, var(--primary), var(--primary-light)); }
+    .stat-card.linked .stat-card-icon { background: #e0e7ff; color: var(--primary); }
     .stat-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 24px rgba(0,0,0,0.08);
@@ -570,6 +573,14 @@
         </div>
         <div class="stat-card-value" id="stat-total">0</div>
         <div class="stat-card-trend">Manually verified</div>
+      </div>
+      <div class="stat-card linked">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Match Rate</span>
+          <div class="stat-card-icon"><i class="mdi mdi-link-variant"></i></div>
+        </div>
+        <div class="stat-card-value" id="stat-linked-percent">0%</div>
+        <div class="stat-card-trend"><span id="stat-linked">0</span> linked / <span id="stat-unlinked">0</span> unlinked</div>
       </div>
     </div>
 
@@ -1123,7 +1134,10 @@
         document.getElementById('stat-failed').textContent = data.failed;
         document.getElementById('stat-completed').textContent = data.ocr;
         document.getElementById('stat-total').textContent = data.verified;
-        console.log('loadStats:', { parseMs: parseTime.toFixed(0), total: data.total });
+        document.getElementById('stat-linked-percent').textContent = data.linked_percent + '%';
+        document.getElementById('stat-linked').textContent = data.linked;
+        document.getElementById('stat-unlinked').textContent = data.unlinked;
+        console.log('loadStats:', { parseMs: parseTime.toFixed(0), total: data.total, linked: data.linked_percent + '%' });
       } catch (e) {
         console.error('Failed to load stats:', e);
       }
