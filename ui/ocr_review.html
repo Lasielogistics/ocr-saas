@@ -364,6 +364,19 @@
     .field-badge i { font-size: 0.85rem; }
     .field-badge.ocr-field { background: #dbeafe; color: #1d4ed8; }
     .field-badge.manual-field { background: #d1fae5; color: #065f46; }
+    .field-count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .field-count-complete { background: #d1fae5; color: #065f46; }
+    .field-count-partial { background: #fef3c7; color: #92400e; }
+    .field-count-none { background: var(--gray-100); color: var(--gray-500); }
     .action-btn {
       width: 32px;
       height: 32px;
@@ -682,8 +695,9 @@
               <th class="sortable" data-sort="container_number" onclick="toggleSort('container_number')" style="width: 14%;">Container # <span class="sort-icon"></span></th>
               <th class="sortable" data-sort="company" onclick="toggleSort('company')" style="width: 15%;">Customer <span class="sort-icon"></span></th>
               <th class="sortable" data-sort="document_type" onclick="toggleSort('document_type')" style="width: 14%;">Type <span class="sort-icon"></span></th>
-              <th class="sortable" data-sort="status" onclick="toggleSort('status')" style="width: 10%;">Status <span class="sort-icon"></span></th>
-              <th class="sortable" data-sort="created_at" onclick="toggleSort('created_at')" style="width: 13%;">Date <span class="sort-icon"></span></th>
+              <th class="sortable" data-sort="status" onclick="toggleSort('status')" style="width: 8%;">Status <span class="sort-icon"></span></th>
+              <th style="width: 9%;">Fields</th>
+              <th class="sortable" data-sort="created_at" onclick="toggleSort('created_at')" style="width: 11%;">Date <span class="sort-icon"></span></th>
               <th style="width: 8%;">Actions</th>
             </tr>
           </thead>
@@ -1010,7 +1024,7 @@
       const visibleCount = endIndex - startIndex;
 
       // Create spacer for rows above
-      let html = `<tr style="height:${startIndex * ROW_HEIGHT}px;"><td colspan="7"></td></tr>`;
+      let html = `<tr style="height:${startIndex * ROW_HEIGHT}px;"><td colspan="8"></td></tr>`;
 
       // Render visible rows
       for (let i = startIndex; i < endIndex; i++) {
@@ -1020,9 +1034,13 @@
         const isExpanded = expandedRows.has(doc.job_id);
         const fields = doc.extracted_fields || {};
         const isOcr = doc.status === 'ocr';
-        const isManual = doc.status === 'verified' || doc.status === 'review';
         const keyFields = ['date', 'time', 'terminal', 'license_plate', 'container_number', 'chassis_number'];
         const fieldLabels = { date: 'Date', time: 'Time', terminal: 'Terminal', license_plate: 'License', container_number: 'Container', chassis_number: 'Chassis' };
+
+        // Count extracted key fields
+        const extractedCount = keyFields.filter(f => fields[f] && fields[f].trim()).length;
+        const fieldCountClass = extractedCount === 6 ? 'field-count-complete' : extractedCount > 0 ? 'field-count-partial' : 'field-count-none';
+        const fieldCountHtml = `<span class="field-count-badge ${fieldCountClass}">${extractedCount}/6</span>`;
 
         let fieldBadges = '';
         for (const f of keyFields) {
@@ -1049,6 +1067,7 @@
             <td>${doc.company || '—'}</td>
             <td><span class="doc-type-badge" onclick="openTypeSelector('${doc.job_id}', '${doc.document_type || ''}')">${doc.document_type || 'unknown'}</span></td>
             <td>${statusBadge}</td>
+            <td>${fieldCountHtml}</td>
             <td>${date}</td>
             <td style="width: 90px;" onclick="event.stopPropagation();">
               <div class="d-flex gap-1 justify-content-center">
@@ -1065,7 +1084,7 @@
         if (isExpanded) {
           html += `
           <tr class="detail-row">
-            <td colspan="7">
+            <td colspan="8">
               <div class="field-detail-panel">
                 <div class="field-detail-title">Field Extraction Details</div>
                 <div class="field-badges">${fieldBadges}</div>
@@ -1076,7 +1095,7 @@
       }
 
       // Create spacer for rows below
-      html += `<tr style="height:${(docs.length - endIndex) * ROW_HEIGHT}px;"><td colspan="7"></td></tr>`;
+      html += `<tr style="height:${(docs.length - endIndex) * ROW_HEIGHT}px;"><td colspan="8"></td></tr>`;
 
       tbody.innerHTML = html;
     }
