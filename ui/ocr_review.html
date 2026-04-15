@@ -321,6 +321,8 @@
       text-overflow: ellipsis;
     }
     .filename-icon { color: var(--danger); }
+    .expand-icon { color: var(--gray-400); font-size: 1.1rem; transition: transform 0.2s; width: 20px; flex-shrink: 0; }
+    .doc-row.expanded .expand-icon { color: var(--primary); }
     .container-number {
       font-weight: 700;
       color: var(--gray-800);
@@ -345,6 +347,23 @@
       color: white;
       transform: scale(1.05);
     }
+    .detail-row { background: var(--gray-50); }
+    .detail-row:hover { background: var(--gray-50); }
+    .field-detail-panel { padding: 0.75rem 1rem 0.75rem 3rem; }
+    .field-detail-title { font-size: 0.7rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .field-badges { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .field-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .field-badge i { font-size: 0.85rem; }
+    .field-badge.ocr-field { background: #dbeafe; color: #1d4ed8; }
+    .field-badge.manual-field { background: #d1fae5; color: #065f46; }
     .action-btn {
       width: 32px;
       height: 32px;
@@ -975,6 +994,7 @@
     const ROW_HEIGHT = 40; // px per row
     const BUFFER_SIZE = 10; // extra rows above/below
     let allDocs = []; // store all docs for virtual scroll
+    let expandedRows = new Set(); // track expanded row job_ids
     let scrollContainer = null;
 
     function renderVirtualTable(docs, scrollTop = 0) {
@@ -997,10 +1017,30 @@
         const doc = docs[i];
         const statusBadge = getStatusBadge(doc.status);
         const date = doc.created_at ? new Date(doc.created_at).toLocaleString() : 'N/A';
+        const isExpanded = expandedRows.has(doc.job_id);
+        const fields = doc.extracted_fields || {};
+        const isOcr = doc.status === 'ocr';
+        const isManual = doc.status === 'verified' || doc.status === 'review';
+        const keyFields = ['date', 'time', 'terminal', 'license_plate', 'container_number', 'chassis_number'];
+        const fieldLabels = { date: 'Date', time: 'Time', terminal: 'Terminal', license_plate: 'License', container_number: 'Container', chassis_number: 'Chassis' };
+
+        let fieldBadges = '';
+        for (const f of keyFields) {
+          const val = fields[f];
+          const hasVal = val && val.trim();
+          if (hasVal) {
+            const cls = isOcr ? 'ocr-field' : 'manual-field';
+            const lbl = isOcr ? 'OCR' : 'Manual';
+            fieldBadges += `<span class="field-badge ${cls}"><i class="mdi mdi-check"></i> ${fieldLabels[f]}: ${val}</span> `;
+          }
+        }
+        if (!fieldBadges) fieldBadges = '<span class="text-muted">No key fields extracted</span>';
+
         html += `
-          <tr>
+          <tr class="doc-row ${isExpanded ? 'expanded' : ''}" onclick="toggleRowExpand('${doc.job_id}')" style="cursor:pointer;">
             <td>
               <div class="filename-cell">
+                <i class="mdi mdi-chevron-${isExpanded ? 'down' : 'right'} expand-icon"></i>
                 <i class="mdi mdi-file-pdf-box filename-icon"></i>
                 <span>${doc.filename || 'Unknown'}</span>
               </div>
@@ -1010,7 +1050,7 @@
             <td><span class="doc-type-badge" onclick="openTypeSelector('${doc.job_id}', '${doc.document_type || ''}')">${doc.document_type || 'unknown'}</span></td>
             <td>${statusBadge}</td>
             <td>${date}</td>
-            <td style="width: 90px;">
+            <td style="width: 90px;" onclick="event.stopPropagation();">
               <div class="d-flex gap-1 justify-content-center">
                 <button class="btn btn-sm action-btn btn-info" onclick="viewPdf('${doc.job_id}')" title="View PDF">
                   <i class="mdi mdi-file-pdf-box"></i>
@@ -1021,6 +1061,18 @@
               </div>
             </td>
           </tr>`;
+
+        if (isExpanded) {
+          html += `
+          <tr class="detail-row">
+            <td colspan="7">
+              <div class="field-detail-panel">
+                <div class="field-detail-title">Field Extraction Details</div>
+                <div class="field-badges">${fieldBadges}</div>
+              </div>
+            </td>
+          </tr>`;
+        }
       }
 
       // Create spacer for rows below
@@ -1069,6 +1121,16 @@
         if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
         return 0;
       });
+    }
+
+    function toggleRowExpand(jobId) {
+      if (expandedRows.has(jobId)) {
+        expandedRows.delete(jobId);
+      } else {
+        expandedRows.add(jobId);
+      }
+      const scrollTop = scrollContainer?.scrollTop || 0;
+      renderVirtualTable(allDocs, scrollTop);
     }
 
     // --- Init ---
@@ -1164,12 +1226,12 @@
         // Field extraction bars
         const total = data.total || 1;
         const fieldData = [
-          { id: 'field-date', barId: 'bar-date', value: data.field_date },
-          { id: 'field-time', barId: 'bar-time', value: data.field_time },
-          { id: 'field-terminal', barId: 'bar-terminal', value: data.field_terminal },
-          { id: 'field-license_plate', barId: 'bar-license_plate', value: data.field_license_plate },
-          { id: 'field-container', barId: 'bar-container', value: data.field_container },
-          { id: 'field-chassis', barId: 'bar-chassis', value: data.field_chassis },
+          { id: 'stat-field-date', barId: 'bar-date', value: data.field_date },
+          { id: 'stat-field-time', barId: 'bar-time', value: data.field_time },
+          { id: 'stat-field-terminal', barId: 'bar-terminal', value: data.field_terminal },
+          { id: 'stat-field-license_plate', barId: 'bar-license_plate', value: data.field_license_plate },
+          { id: 'stat-field-container', barId: 'bar-container', value: data.field_container },
+          { id: 'stat-field-chassis', barId: 'bar-chassis', value: data.field_chassis },
         ];
         fieldData.forEach(f => {
           const el = document.getElementById(f.id);
