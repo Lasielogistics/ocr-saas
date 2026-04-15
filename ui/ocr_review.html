@@ -262,10 +262,10 @@
       background: var(--gray-50);
       color: var(--gray-600);
       font-weight: 600;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      padding: 0.875rem 1rem;
+      padding: 0.5rem 0.75rem;
       border: none;
       white-space: nowrap;
       position: sticky;
@@ -288,9 +288,13 @@
     .sort-icon.desc::after { content: '▼'; opacity: 1; }
     th.sorted .sort-icon { opacity: 1; }
     .review-table tbody td {
-      padding: 1rem;
+      padding: 0.5rem 0.75rem;
       border-color: var(--gray-100);
       vertical-align: middle;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
     }
     .review-table tbody tr { transition: background 0.15s; }
     .review-table tbody tr:hover { background: var(--gray-50); }
@@ -300,6 +304,9 @@
       gap: 0.5rem;
       font-weight: 500;
       color: var(--gray-700);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .filename-icon { color: var(--danger); }
     .container-number {
@@ -311,14 +318,15 @@
     .doc-type-badge {
       display: inline-flex;
       align-items: center;
-      padding: 0.35rem 0.75rem;
+      padding: 0.25rem 0.5rem;
       border-radius: 20px;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 600;
       background: var(--gray-100);
       color: var(--gray-600);
       cursor: pointer;
       transition: all 0.2s;
+      white-space: nowrap;
     }
     .doc-type-badge:hover {
       background: var(--primary);
@@ -358,10 +366,11 @@
     .badge-status {
       display: inline-flex;
       align-items: center;
-      padding: 0.35rem 0.65rem;
+      padding: 0.2rem 0.5rem;
       border-radius: 6px;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 600;
+      white-space: nowrap;
     }
     .badge-review { background: #fef3c7; color: #b45309; }
     .badge-failed { background: #fee2e2; color: #dc2626; }
@@ -929,7 +938,7 @@
     let sortDir = 'desc';
 
     // Virtual scrolling state
-    const ROW_HEIGHT = 56; // px per row
+    const ROW_HEIGHT = 40; // px per row
     const BUFFER_SIZE = 10; // extra rows above/below
     let allDocs = []; // store all docs for virtual scroll
     let scrollContainer = null;
