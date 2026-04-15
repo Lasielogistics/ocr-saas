@@ -702,7 +702,7 @@
             </tr>
           </thead>
           <tbody id="review-tbody">
-            <tr><td colspan="7" class="text-center p-4"><div class="spinner mx-auto"></div></td></tr>
+            <tr><td colspan="8" class="text-center p-4"><div class="spinner mx-auto"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -1014,7 +1014,7 @@
     function renderVirtualTable(docs, scrollTop = 0) {
       const tbody = document.getElementById('review-tbody');
       if (!docs.length) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4"><div class="spinner mx-auto"></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center p-4"><div class="spinner mx-auto"></div></td></tr>`;
         return;
       }
 
@@ -1272,7 +1272,7 @@
       const typeFilter = document.getElementById('type-filter').value;
       const tbody = document.getElementById('review-tbody');
 
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4"><div class="spinner mx-auto"></div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4"><div class="spinner mx-auto"></div></td></tr>';
 
       try {
         let path = '/documents?limit=99999';
