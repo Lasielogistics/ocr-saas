@@ -1,0 +1,28 @@
+meta {
+  name: GetGateAppointmentDetails
+  type: http
+  seq: 5
+}
+
+post {
+  url: https://{{hostname}}/termpoint-tms/api/MyAppointment/GetGateAppointmentDetails
+  body: json
+  auth: inherit
+}
+
+headers {
+  Termpoint-JWT: JWT {{Termpoint-JWT}}
+  Content-Type: application/json
+  Consumer-Key: {{apigee-consumer-key}}
+  Authorization: Bearer {{forgerock-token}}
+}
+
+body:json {
+  {"gateAppt_Id": "2236035"}
+  
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

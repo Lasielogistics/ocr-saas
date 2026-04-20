@@ -1,0 +1,44 @@
+meta {
+  name: 2. AuthenticateUser
+  type: http
+  seq: 1
+}
+
+post {
+  url: https://{{hostname}}/termpoint-tms/api/Login/AuthenticateUser
+  body: json
+  auth: inherit
+}
+
+headers {
+  Consumer-Key: {{apigee-consumer-key}}
+  Authorization: Bearer {{Forgerock-Token}}
+}
+
+body:json {
+  {"authenticationKey": "{{termpoint-authenticationKey}}"}
+}
+
+script:post-response {
+  const raw = res.getBody();
+  const body = typeof raw === "string" ? JSON.parse(raw) : raw;
+  
+  const appStatus = body?.status?.StatusCode;
+  
+  if (res.getStatus() !== 200 || appStatus !== 200) {
+    throw new Error(`AuthenticateUser failed. Body was: ${JSON.stringify(body)}`);
+  }
+  
+  const token = body?.responseBody?.ResponseData?.AccessToken;
+  
+  if (!token) {
+    throw new Error(`Termpoint JWT not found. Body was: ${JSON.stringify(body)}`);
+  }
+  
+  bru.setEnvVar("Termpoint-JWT", token);
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,48 @@
+meta {
+  name: PostCreateAppointment
+  type: http
+  seq: 8
+}
+
+post {
+  url: https://{{hostname}}/termpoint-tms/api/MyAppointment/PostCreateAppointment
+  body: json
+  auth: none
+}
+
+headers {
+  Termpoint-JWT: JWT {{Termpoint-JWT}}
+  Content-Type: application/json
+  Consumer-Key: {{apigee-consumer-key}}
+  Authorization: Bearer {{forgerock-token}}
+}
+
+body:json {
+  [{
+      "gateApptStart_Tm": "23:00",
+      "gateAppt_Dt": "2024-12-25T00:00:00",
+      "driverId_Num": "",
+      "driverOwnChs_Flg": "Y",
+      "truckPlate_Nbr": "",
+      "cargoRef_Num": "",
+      "cargoRefType_Cd": "",
+      "shippingLine_Cd": "",
+      "container_Num": "MSKU6552574",
+      "chassis_Num": "",
+      "genset_Num": "",
+      "con_Cd": "",
+      "reefer_Flg": "",
+      "hazmat_Flg": "",
+      "oD_Flg": "",
+      "vgmSubmitted_Flg": "",
+      "seal1_Num": "",
+      "seal2_Num": "",
+      "apptType_Cd": "MD",
+      "position_On_Truck": 0
+    }]
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,34 @@
+meta {
+  name: GetContainerAvailability
+  type: http
+  seq: 3
+}
+
+post {
+  url: https://{{hostname}}/termpoint-tms/api/MyAppointment/GetContainerAvailability
+  body: json
+  auth: none
+}
+
+headers {
+  Termpoint-JWT: JWT {{Termpoint-JWT}}
+  Content-Type: application/json
+  Consumer-Key: {{apigee-consumer-key}}
+  Authorization: Bearer {{forgerock-token}}
+}
+
+body:json {
+  [
+    {
+      "container_Num": "PONU7634609"
+    },
+    {
+      "container_Num": "TCLU7930500"
+    }
+  ]
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

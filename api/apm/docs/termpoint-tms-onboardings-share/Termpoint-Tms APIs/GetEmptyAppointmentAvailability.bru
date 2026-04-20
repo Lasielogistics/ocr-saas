@@ -1,0 +1,31 @@
+meta {
+  name: GetEmptyAppointmentAvailability
+  type: http
+  seq: 4
+}
+
+post {
+  url: https://{{hostname}}/termpoint-tms/api/MyAppointment/GetEmptyAppointmentAvailability
+  body: json
+  auth: inherit
+}
+
+headers {
+  Termpoint-JWT: JWT {{Termpoint-JWT}}
+  Content-Type: application/json
+  Consumer-Key: {{apigee-consumer-key}}
+  Authorization: Bearer {{forgerock-token}}
+}
+
+body:json {
+  {
+      "gateAppt_Dt": "2023-10-25T00:00:00",
+      "apptType_Cd": "IP"
+  }
+  
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,33 @@
+meta {
+  name: 2. AuthenticateUser
+  type: http
+  seq: 1
+}
+
+post {
+  url: https://{{hostname}}/termpoint-tms/api/Login/AuthenticateUser
+  body: json
+  auth: inherit
+}
+
+headers {
+  Consumer-Key: {{apigee-consumer-key}}
+  Authorization: Bearer {{forgerock-token}}
+}
+
+body:json {
+  {"authenticationKey": "{{termpoint-authenticationKey}}"}
+}
+
+script:post-response {
+  // Extracting a value from the JSON response
+  var jsonData = res.getBody();
+  var extractedValue = jsonData.res.getBody().ResponseData.AccessToken;
+  // Setting the extracted value as a Postman variable
+  bru.setEnvVar("Termpoint-JWT", extractedValue);
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

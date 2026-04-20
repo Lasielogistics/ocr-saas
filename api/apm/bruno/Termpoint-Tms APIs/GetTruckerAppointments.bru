@@ -1,0 +1,37 @@
+meta {
+  name: GetTruckerAppointments
+  type: http
+  seq: 6
+}
+
+post {
+  url: https://{{hostname}}/termpoint-tms/api/MyAppointment/GetTruckerAppointments
+  body: json
+  auth: none
+}
+
+headers {
+  Termpoint-JWT: JWT {{Termpoint-JWT}}
+  Content-Type: application/json
+  Consumer-Key: {{apigee-consumer-key}}
+  Authorization: Bearer {{Forgerock-Token}}
+}
+
+body:json {
+  {
+    "gateApptStart_DtTm": "2026-4-20T00:00:00",
+    "gateApptEnd_DtTm": "2026-4-23T23:00:00",
+    "apptType_Cd": "",
+    "truckPlate_Nbr": "",
+    "apptStatus_Cd": "",
+    "cargoRef_Num": "",
+    "container_Num": ""
+  }
+  
+  
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

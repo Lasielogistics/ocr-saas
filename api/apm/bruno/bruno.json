@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "termpoint-tms-onboardings-share",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
