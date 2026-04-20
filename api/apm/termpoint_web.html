@@ -227,22 +227,27 @@ async function connect() {
     state.jwt = data.jwt;
     state.terminal = data.terminal;
 
-    document.getElementById('authBadge').textContent = 'CONNECTED';
-    document.getElementById('authBadge').style.background = '#27ae60';
-    document.getElementById('connectBtn').style.display = 'none';
-    document.getElementById('iamStatus').textContent = data.iam_token ? 'OK' : '—';
-    document.getElementById('jwtStatus').textContent = data.jwt ? 'OK' : '—';
-    document.getElementById('terminal').textContent = data.terminal || '—';
-    document.getElementById('userDisplay').textContent = data.terminal || 'Connected';
-    document.getElementById('statusBar').style.display = 'flex';
+    const authBadge = document.getElementById('authBadge');
+    const connectBtn = document.getElementById('connectBtn');
+    const iamStatus = document.getElementById('iamStatus');
+    const jwtStatus = document.getElementById('jwtStatus');
+    const terminalEl = document.getElementById('terminal');
+    const statusBar = document.getElementById('statusBar');
+
+    if (authBadge) { authBadge.textContent = 'CONNECTED'; authBadge.style.background = '#27ae60'; }
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (iamStatus) iamStatus.textContent = data.iam_token ? 'OK' : '—';
+    if (jwtStatus) jwtStatus.textContent = data.jwt ? 'OK' : '—';
+    if (terminalEl) terminalEl.textContent = data.terminal || '—';
+    if (statusBar) statusBar.style.display = 'flex';
 
     showToast('Connected successfully');
     loadSlots();
     loadAppointments();
 
   } catch (e) {
-    document.getElementById('authBadge').textContent = 'ERROR';
-    document.getElementById('authBadge').style.background = '#e74c3c';
+    const authBadge = document.getElementById('authBadge');
+    if (authBadge) { authBadge.textContent = 'ERROR'; authBadge.style.background = '#e74c3c'; }
     showToast('Connection failed: ' + e.message, 'error');
   }
 }
