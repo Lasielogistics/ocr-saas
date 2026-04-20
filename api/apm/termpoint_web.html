@@ -140,29 +140,6 @@
   </div>
 
   <!-- Empty Appointment Availability -->
-  <div class="card" id="emptyCard" style="display:none">
-    <div class="card-header">Empty Appointment Availability <span class="badge" id="emptyDate">—</span></div>
-    <div class="card-body">
-      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
-        <div class="field" style="margin:0">
-          <label>Date</label>
-          <input type="date" id="emptyDateInput" value="2026-04-20">
-        </div>
-        <div class="field" style="margin:0">
-          <label>Type</label>
-          <select id="emptyType">
-            <option value="MD">Empty Drop Off</option>
-            <option value="MP">Empty Pickup</option>
-          </select>
-        </div>
-        <div class="field" style="margin:0; display:flex; align-items:flex-end;">
-          <button class="btn btn-primary" onclick="loadEmptyAvailability()" style="height:38px">Check</button>
-        </div>
-      </div>
-      <div id="emptyGrid"></div>
-    </div>
-  </div>
-
   <!-- Container Availability -->
   <div class="card" id="containerCard" style="display:none">
     <div class="card-header">Container Availability</div>
@@ -348,7 +325,6 @@ async function connect() {
     showToast('Connected successfully');
     loadSlots();
     loadAppointments();
-    loadEmptyAvailability();
 
   } catch (e) {
     document.getElementById('authBadge').textContent = 'ERROR';
@@ -730,13 +706,11 @@ function showTab(tab) {
   // Show/hide cards
   const showSlots = ['create'].includes(tab);
   document.getElementById('slotsCard').style.display = showSlots ? 'block' : 'none';
-  document.getElementById('emptyCard').style.display = tab === 'create' ? 'block' : 'none';
   document.getElementById('containerCard').style.display = tab === 'create' ? 'block' : 'none';
 }
 
 window.onload = () => {
   document.getElementById('slotsCard').style.display = 'block';
-  document.getElementById('emptyCard').style.display = 'block';
   document.getElementById('containerCard').style.display = 'block';
   document.getElementById('apptsCard').style.display = 'block';
 };
