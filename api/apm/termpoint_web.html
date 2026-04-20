@@ -91,8 +91,11 @@
 <body>
 
 <div class="header">
-  <h1>TERMPoint TMS — Pier 400</h1>
-  <div class="user" id="userDisplay">Not connected</div>
+  <h1>TERMPoint TMS</h1>
+  <div style="display:flex; align-items:center; gap:1rem;">
+    <span class="badge" id="authBadge" style="background:#e74c3c">DISCONNECTED</span>
+    <button class="btn btn-primary" id="connectBtn" onclick="connect()">Connect</button>
+  </div>
 </div>
 
 <div class="container">
@@ -102,18 +105,6 @@
     <div class="status-item"><span class="label">Terminal</span><span class="value" id="terminal">—</span></div>
     <div class="status-item"><span class="label">IAM Token</span><span class="value" id="iamStatus" style="color:#888">—</span></div>
     <div class="status-item"><span class="label">Termpoint JWT</span><span class="value" id="jwtStatus" style="color:#888">—</span></div>
-  </div>
-
-  <!-- Auth Card -->
-  <div class="card" id="authCard">
-    <div class="card-header">Authentication <span class="badge" id="authBadge">DISCONNECTED</span></div>
-    <div class="card-body">
-      <div class="auth-section" id="authSection">
-        <p>Click connect to authenticate with the TERMPoint TMS API</p>
-        <button class="btn btn-primary" onclick="connect()">Connect</button>
-        <div class="terminal">Production: api.apmterminals.com</div>
-      </div>
-    </div>
   </div>
 
   <!-- Available Slots -->
@@ -346,7 +337,8 @@ async function connect() {
     state.terminal = data.terminal;
 
     document.getElementById('authBadge').textContent = 'CONNECTED';
-    document.getElementById('authBadge').className = 'badge';
+    document.getElementById('authBadge').style.background = '#27ae60';
+    document.getElementById('connectBtn').style.display = 'none';
     document.getElementById('iamStatus').textContent = data.iam_token ? 'OK' : '—';
     document.getElementById('jwtStatus').textContent = data.jwt ? 'OK' : '—';
     document.getElementById('terminal').textContent = data.terminal || '—';
@@ -360,7 +352,7 @@ async function connect() {
 
   } catch (e) {
     document.getElementById('authBadge').textContent = 'ERROR';
-    document.getElementById('authBadge').className = 'badge error';
+    document.getElementById('authBadge').style.background = '#e74c3c';
     showToast('Connection failed: ' + e.message, 'error');
   }
 }
