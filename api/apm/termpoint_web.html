@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TERMPoint TMS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Lato', 'Helvetica', Arial, sans-serif; background: #f4f6f9; color: #333; }
+
+    .header { background: #1b1e2f; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 1.4rem; }
+    .header .user { font-size: 0.9rem; opacity: 0.8; }
+
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+
+    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem; overflow: hidden; }
+    .card-header { background: #2c3e50; color: #fff; padding: 0.75rem 1.25rem; font-weight: 600; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; }
+    .card-header .badge { background: #27ae60; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; }
+    .card-header .badge.error { background: #e74c3c; }
+    .card-header .badge.warning { background: #f39c12; }
+    .card-body { padding: 1.25rem; }
+
+    .auth-section { text-align: center; padding: 3rem; }
+    .auth-section p { color: #666; margin-bottom: 1rem; }
+    .auth-section .terminal { font-size: 0.85rem; color: #888; margin-top: 0.5rem; }
+
+    .status-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .status-item { background: #fff; padding: 0.75rem 1rem; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); font-size: 0.85rem; }
+    .status-item .label { color: #888; display: block; }
+    .status-item .value { font-weight: 600; color: #2c3e50; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; }
+    .slot { padding: 0.5rem; border: 2px solid #e0e0e0; border-radius: 6px; text-align: center; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+    .slot:hover { border-color: #3498db; background: #ebf5fb; }
+    .slot.selected { border-color: #27ae60; background: #eafaf1; color: #27ae60; font-weight: 600; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 0.8rem; font-weight: 600; color: #555; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field input, .field select, .field textarea { width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; }
+    .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #3498db; }
+
+    .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: #3498db; color: #fff; }
+    .btn-primary:hover { background: #2980b9; }
+    .btn-success { background: #27ae60; color: #fff; }
+    .btn-success:hover { background: #1e8449; }
+    .btn-danger { background: #e74c3c; color: #fff; }
+    .btn-danger:hover { background: #c0392b; }
+    .btn-outline { background: transparent; border: 1px solid #ddd; color: #555; }
+    .btn-outline:hover { background: #f8f9fa; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th { background: #f8f9fa; text-align: left; padding: 0.6rem 0.75rem; font-weight: 600; color: #555; border-bottom: 2px solid #e0e0e0; }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #f0f0f0; }
+    tr:hover td { background: #f8f9fa; }
+    .status-chip { padding: 0.2rem 0.5rem; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
+    .status-C { background: #d4edda; color: #155724; }
+    .status-W { background: #fff3cd; color: #856404; }
+    .status-P { background: #cce5ff; color: #004085; }
+    .status-R { background: #f8d7da; color: #721c24; }
+    .status-D { background: #d1ecf1; color: #0c5460; }
+    .status-X { background: #e2e3e5; color: #383d41; }
+
+    .tabs { display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 1rem; flex-wrap: wrap; gap: 0; }
+    .tab { padding: 0.75rem 1.5rem; cursor: pointer; font-weight: 600; color: #888; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+    .tab.active { color: #3498db; border-bottom-color: #3498db; }
+    .tab:hover { color: #3498db; }
+    .tab.danger { color: #e74c3c; }
+    .tab.danger:hover { color: #c0392b; }
+
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 0.8rem 1.2rem; border-radius: 6px; color: #fff; font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; z-index: 1000; }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #27ae60; }
+    .toast.error { background: #e74c3c; }
+
+    .loading { text-align: center; padding: 2rem; color: #888; }
+    .loading::after { content: '...'; animation: dots 1.5s infinite; }
+    @keyframes dots { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+
+    .empty { text-align: center; padding: 2rem; color: #aaa; font-size: 0.9rem; }
+
+    .info-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .info-tag { background: #e8f4fd; color: #2980b9; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #aaa; margin: 1rem 0 0.5rem; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>TERMPoint TMS — Pier 400</h1>
+  <div class="user" id="userDisplay">Not connected</div>
+</div>
+
+<div class="container">
+
+  <!-- Auth Status Bar -->
+  <div class="status-bar" id="statusBar" style="display:none">
+    <div class="status-item"><span class="label">Terminal</span><span class="value" id="terminal">—</span></div>
+    <div class="status-item"><span class="label">IAM Token</span><span class="value" id="iamStatus" style="color:#888">—</span></div>
+    <div class="status-item"><span class="label">Termpoint JWT</span><span class="value" id="jwtStatus" style="color:#888">—</span></div>
+  </div>
+
+  <!-- Auth Card -->
+  <div class="card" id="authCard">
+    <div class="card-header">Authentication <span class="badge" id="authBadge">DISCONNECTED</span></div>
+    <div class="card-body">
+      <div class="auth-section" id="authSection">
+        <p>Click connect to authenticate with the TERMPoint TMS API</p>
+        <button class="btn btn-primary" onclick="connect()">Connect</button>
+        <div class="terminal">Production: api.apmterminals.com</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Available Slots -->
+  <div class="card" id="slotsCard" style="display:none">
+    <div class="card-header">Available Time Slots <span class="badge" id="slotsDate">—</span></div>
+    <div class="card-body">
+      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <div class="field" style="margin:0">
+          <label>Date</label>
+          <input type="date" id="slotDate" value="2026-04-20">
+        </div>
+        <div class="field" style="margin:0">
+          <label>Type</label>
+          <select id="slotType">
+            <option value="IP">Import Pickup</option>
+            <option value="ID">Import Drop Off</option>
+            <option value="XP">Export Pickup</option>
+            <option value="XD">Export Drop Off</option>
+            <option value="MP">Empty Pickup</option>
+            <option value="MD">Empty Drop Off</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label>Container # (for IP)</label>
+          <input type="text" id="slotContainer" placeholder="Optional" style="text-transform:uppercase">
+        </div>
+        <div class="field" style="margin:0; display:flex; align-items:flex-end;">
+          <button class="btn btn-primary" onclick="loadSlots()" style="height:38px">Check Slots</button>
+        </div>
+      </div>
+      <div id="slotsGrid" class="grid"></div>
+    </div>
+  </div>
+
+  <!-- Empty Appointment Availability -->
+  <div class="card" id="emptyCard" style="display:none">
+    <div class="card-header">Empty Appointment Availability <span class="badge" id="emptyDate">—</span></div>
+    <div class="card-body">
+      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <div class="field" style="margin:0">
+          <label>Date</label>
+          <input type="date" id="emptyDateInput" value="2026-04-20">
+        </div>
+        <div class="field" style="margin:0">
+          <label>Type</label>
+          <select id="emptyType">
+            <option value="MD">Empty Drop Off</option>
+            <option value="MP">Empty Pickup</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0; display:flex; align-items:flex-end;">
+          <button class="btn btn-primary" onclick="loadEmptyAvailability()" style="height:38px">Check</button>
+        </div>
+      </div>
+      <div id="emptyGrid"></div>
+    </div>
+  </div>
+
+  <!-- Container Availability -->
+  <div class="card" id="containerCard" style="display:none">
+    <div class="card-header">Container Availability</div>
+    <div class="card-body">
+      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <div class="field" style="margin:0; flex:1;">
+          <label>Container Numbers (comma separated)</label>
+          <input type="text" id="containerInput" placeholder="FSCU6954495, TEMU8802667" style="text-transform:uppercase">
+        </div>
+        <div class="field" style="margin:0; display:flex; align-items:flex-end;">
+          <button class="btn btn-primary" onclick="checkContainerAvailability()" style="height:38px">Check</button>
+        </div>
+      </div>
+      <div id="containerResult"></div>
+    </div>
+  </div>
+
+  <!-- Appointments -->
+  <div class="card" id="apptsCard" style="display:none">
+    <div class="card-header">
+      My Appointments
+      <div style="display:flex; gap:0.5rem;">
+        <button class="btn btn-outline" onclick="loadAppointments()" style="padding:0.3rem 0.8rem; font-size:0.75rem">Refresh</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="tabs">
+        <div class="tab active" onclick="showTab('list')">List</div>
+        <div class="tab" onclick="showTab('create')">New Appointment</div>
+        <div class="tab" onclick="showTab('manage')">Manage</div>
+        <div class="tab danger" onclick="showTab('cancel')">Cancel</div>
+      </div>
+
+      <!-- List Tab -->
+      <div id="tabList">
+        <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+          <div class="field" style="margin:0">
+            <label>From Date</label>
+            <input type="date" id="apptFrom" value="2026-04-20">
+          </div>
+          <div class="field" style="margin:0">
+            <label>To Date</label>
+            <input type="date" id="apptTo" value="2026-04-23">
+          </div>
+          <div class="field" style="margin:0; display:flex; align-items:flex-end;">
+            <button class="btn btn-outline" onclick="loadAppointments()" style="height:38px">Search</button>
+          </div>
+        </div>
+        <div id="appointmentsTable"></div>
+      </div>
+
+      <!-- Create Tab -->
+      <div id="tabCreate" style="display:none">
+        <div class="section-title">Appointment Details</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Appointment Type</label>
+            <select id="createType">
+              <option value="IP">Import Pickup</option>
+              <option value="ID">Import Drop Off</option>
+              <option value="XP">Export Pickup</option>
+              <option value="XD">Export Drop Off</option>
+              <option value="MP">Empty Pickup</option>
+              <option value="MD">Empty Drop Off</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="createDate" value="2026-04-25">
+          </div>
+          <div class="field">
+            <label>Time Slot</label>
+            <input type="text" id="createSlot" placeholder="e.g. 08:00 - 08:30" readonly>
+          </div>
+          <div class="field">
+            <label>Container #</label>
+            <input type="text" id="createContainer" placeholder="MSKU6552574" style="text-transform:uppercase">
+          </div>
+          <div class="field">
+            <label>Driver Own Chassis</label>
+            <select id="createOwnChassis">
+              <option value="Y">Yes</option>
+              <option value="N">No</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Position on Truck</label>
+            <input type="number" id="createPosition" value="0" min="0">
+          </div>
+        </div>
+        <div style="margin-top:1rem; display:flex; gap:1rem;">
+          <button class="btn btn-success" onclick="createAppointment()">Create Appointment</button>
+          <button class="btn btn-outline" onclick="showTab('list')">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Manage Tab -->
+      <div id="tabManage" style="display:none">
+        <p style="color:#888; font-size:0.85rem; margin-bottom:1rem;">Select an appointment from the list above to reassign driver, truck, or slot.</p>
+        <div class="form-grid">
+          <div class="field">
+            <label>Gate Appt ID</label>
+            <input type="text" id="manageId" placeholder="e.g. 54100654" readonly>
+          </div>
+          <div class="field">
+            <label>Driver ID</label>
+            <input type="text" id="manageDriver" placeholder="Driver ID Number">
+          </div>
+          <div class="field">
+            <label>Truck Plate #</label>
+            <input type="text" id="manageTruck" placeholder="Truck Plate Number">
+          </div>
+          <div class="field">
+            <label>New Slot Time</label>
+            <input type="text" id="manageSlot" placeholder="e.g. 09:00 - 09:30">
+          </div>
+        </div>
+        <div style="margin-top:1rem; display:flex; gap:1rem;">
+          <button class="btn btn-primary" onclick="manageAppointment()">Update Appointment</button>
+          <button class="btn btn-outline" onclick="showTab('list')">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Cancel Tab -->
+      <div id="tabCancel" style="display:none">
+        <p style="color:#888; font-size:0.85rem; margin-bottom:1rem;">Select appointments to cancel. Only Confirmed (C), Tentative (W), or Rejected (R) appointments can be cancelled.</p>
+        <div id="cancelTable"></div>
+        <div style="margin-top:1rem;">
+          <button class="btn btn-danger" onclick="cancelSelected()" id="cancelBtn" disabled>Cancel Selected</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = window.location.origin;
+
+let state = {
+  iamToken: null,
+  jwt: null,
+  terminal: null,
+  slots: [],
+  selectedSlot: null,
+  appointments: [],
+  selectedForCancel: [],
+  selectedForManage: null,
+};
+
+// ─── Toast ──────────────────────────────────────────────────────────────────────
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+async function connect() {
+  try {
+    const res = await fetch(API + '/auth', { method: 'POST' });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    state.iamToken = data.iam_token;
+    state.jwt = data.jwt;
+    state.terminal = data.terminal;
+
+    document.getElementById('authBadge').textContent = 'CONNECTED';
+    document.getElementById('authBadge').className = 'badge';
+    document.getElementById('iamStatus').textContent = data.iam_token ? 'OK' : '—';
+    document.getElementById('jwtStatus').textContent = data.jwt ? 'OK' : '—';
+    document.getElementById('terminal').textContent = data.terminal || '—';
+    document.getElementById('userDisplay').textContent = data.terminal || 'Connected';
+    document.getElementById('statusBar').style.display = 'flex';
+
+    showToast('Connected successfully');
+    loadSlots();
+    loadAppointments();
+    loadEmptyAvailability();
+
+  } catch (e) {
+    document.getElementById('authBadge').textContent = 'ERROR';
+    document.getElementById('authBadge').className = 'badge error';
+    showToast('Connection failed: ' + e.message, 'error');
+  }
+}
+
+// ─── Slots ───────────────────────────────────────────────────────────────────
+
+async function loadSlots() {
+  const date = document.getElementById('slotDate').value;
+  const type = document.getElementById('slotType').value;
+  const container = document.getElementById('slotContainer').value.trim();
+  const grid = document.getElementById('slotsGrid');
+  grid.innerHTML = '<div class="loading">Loading slots</div>';
+
+  try {
+    const res = await fetch(API + '/slots', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, type, container }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    state.slots = data.slots || [];
+    document.getElementById('slotsDate').textContent = date + ' / ' + type;
+
+    if (state.slots.length === 0) {
+      grid.innerHTML = '<div class="empty">No slots available for this date</div>';
+      return;
+    }
+
+    grid.innerHTML = state.slots.map(s => `
+      <div class="slot" onclick="selectSlot(this, '${s.time}')">
+        ${s.time}
+      </div>
+    `).join('');
+
+  } catch (e) {
+    grid.innerHTML = '<div class="empty" style="color:#e74c3c">Error: ' + e.message + '</div>';
+  }
+}
+
+function selectSlot(el, time) {
+  document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  state.selectedSlot = time;
+  document.getElementById('createSlot').value = time;
+  document.getElementById('createDate').value = document.getElementById('slotDate').value;
+  document.getElementById('createType').value = document.getElementById('slotType').value;
+  showTab('create');
+}
+
+// ─── Empty Availability ────────────────────────────────────────────────────────
+
+async function loadEmptyAvailability() {
+  const date = document.getElementById('emptyDateInput').value;
+  const type = document.getElementById('emptyType').value;
+  const grid = document.getElementById('emptyGrid');
+  grid.innerHTML = '<div class="loading">Checking availability</div>';
+
+  try {
+    const res = await fetch(API + '/empty-availability', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, type }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    document.getElementById('emptyDate').textContent = date + ' / ' + type;
+    const slots = data.slots || [];
+
+    if (slots.length === 0) {
+      grid.innerHTML = '<div class="empty">No empty appointment slots available</div>';
+      return;
+    }
+
+    grid.innerHTML = `
+      <table>
+        <thead><tr><th>Time Slot</th><th>Total Slots</th><th>Appointments</th><th>Available</th></tr></thead>
+        <tbody>
+          ${slots.map(s => `
+            <tr>
+              <td>${s.time || '—'}</td>
+              <td>${s.total || 0}</td>
+              <td>${s.appointments || 0}</td>
+              <td><b style="color:${(s.available || 0) > 0 ? '#27ae60' : '#e74c3c'}">${s.available || 0}</b></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+  } catch (e) {
+    grid.innerHTML = '<div class="empty" style="color:#e74c3c">Error: ' + e.message + '</div>';
+  }
+}
+
+// ─── Container Availability ───────────────────────────────────────────────────
+
+async function checkContainerAvailability() {
+  const input = document.getElementById('containerInput').value.trim();
+  const resultDiv = document.getElementById('containerResult');
+
+  if (!input) return showToast('Please enter container numbers', 'error');
+
+  const containers = input.split(',').map(c => c.trim()).filter(c => c);
+  resultDiv.innerHTML = '<div class="loading">Checking containers</div>';
+
+  try {
+    const res = await fetch(API + '/container-availability', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ containerNums: containers }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const containers_list = data.containers || [];
+
+    if (containers_list.length === 0) {
+      resultDiv.innerHTML = '<div class="empty">No container data found</div>';
+      return;
+    }
+
+    resultDiv.innerHTML = `
+      <table>
+        <thead><tr><th>Container #</th><th>Status</th><th>Shipping Line</th><th>Notes</th></tr></thead>
+        <tbody>
+          ${containers_list.map(c => `
+            <tr>
+              <td>${c.Container_Num || '—'}</td>
+              <td><span class="status-chip status-${c.Available_Flg === 'Y' ? 'C' : 'R'}">${c.Available_Flg === 'Y' ? 'Available' : 'Not Available'}</span></td>
+              <td>${c.Line_Id || '—'}</td>
+              <td>${c.Remarks || '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    // Show messages
+    const msgs = data.messages || [];
+    if (msgs.length > 0) {
+      resultDiv.innerHTML += '<div style="margin-top:0.5rem; font-size:0.8rem; color:#e74c3c">' +
+        msgs.map(m => m.desc).join('; ') + '</div>';
+    }
+
+  } catch (e) {
+    resultDiv.innerHTML = '<div class="empty" style="color:#e74c3c">Error: ' + e.message + '</div>';
+  }
+}
+
+// ─── Appointments ─────────────────────────────────────────────────────────────
+
+async function loadAppointments() {
+  const from = document.getElementById('apptFrom').value;
+  const to = document.getElementById('apptTo').value;
+  const table = document.getElementById('appointmentsTable');
+
+  table.innerHTML = '<div class="loading">Loading appointments</div>';
+
+  try {
+    const res = await fetch(API + '/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    state.appointments = data.appointments || [];
+
+    if (state.appointments.length === 0) {
+      table.innerHTML = '<div class="empty">No appointments found</div>';
+      return;
+    }
+
+    table.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Appt #</th><th>Date</th><th>Slot</th><th>Container</th>
+          <th>Type</th><th>Status</th><th>Driver</th><th>Truck</th>
+        </tr></thead>
+        <tbody>
+          ${state.appointments.map(a => `
+            <tr class="appt-row" data-id="${a.gateAppt_Id}" onclick="selectAppointmentRow(this, ${a.gateAppt_Id})">
+              <td>${a.gateAppt_Id || '—'}</td>
+              <td>${a.gateAppt_Dt || '—'}</td>
+              <td>${a.gateApptStart_Tm || '—'}</td>
+              <td>${a.container_Num || '—'}</td>
+              <td>${a.apptType_Cd || '—'}</td>
+              <td><span class="status-chip status-${a.apptStatus_Cd || ''}">${a.apptStatus_Cd || '—'}</span></td>
+              <td>${a.driverId_Num || '—'}</td>
+              <td>${a.truckPlate_Nbr || '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    renderCancelTable();
+
+  } catch (e) {
+    table.innerHTML = '<div class="empty" style="color:#e74c3c">Error: ' + e.message + '</div>';
+  }
+}
+
+function selectAppointmentRow(el, id) {
+  // Highlight and fill manage form
+  document.querySelectorAll('.appt-row').forEach(r => r.style.background = '');
+  el.style.background = '#e8f4fd';
+  state.selectedForManage = id;
+  document.getElementById('manageId').value = id;
+  const appt = state.appointments.find(a => a.gateAppt_Id == id);
+  if (appt) {
+    document.getElementById('manageDriver').value = appt.driverId_Num || '';
+    document.getElementById('manageTruck').value = appt.truckPlate_Nbr || '';
+    document.getElementById('manageSlot').value = appt.gateApptStart_Tm || '';
+  }
+}
+
+function renderCancelTable() {
+  const table = document.getElementById('cancelTable');
+  const cancelable = state.appointments.filter(a => ['C', 'W', 'R'].includes(a.apptStatus_Cd));
+
+  if (cancelable.length === 0) {
+    table.innerHTML = '<div class="empty">No cancellable appointments found (only C, W, R)</div>';
+    return;
+  }
+
+  table.innerHTML = `
+    <table>
+      <thead><tr>
+        <th><input type="checkbox" id="selectAllCancel" onchange="toggleSelectAllCancel(this)"></th>
+        <th>Appt #</th><th>Date</th><th>Slot</th><th>Container</th><th>Type</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        ${cancelable.map(a => `
+          <tr>
+            <td><input type="checkbox" class="cancel-check" value="${a.gateAppt_Id}" onchange="updateCancelBtn()"></td>
+            <td>${a.gateAppt_Id}</td>
+            <td>${a.gateAppt_Dt}</td>
+            <td>${a.gateApptStart_Tm}</td>
+            <td>${a.container_Num}</td>
+            <td>${a.apptType_Cd}</td>
+            <td><span class="status-chip status-${a.apptStatus_Cd}">${a.apptStatus_Cd}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function toggleSelectAllCancel(el) {
+  document.querySelectorAll('.cancel-check').forEach(c => c.checked = el.checked);
+  updateCancelBtn();
+}
+
+function updateCancelBtn() {
+  const checked = [...document.querySelectorAll('.cancel-check:checked')].map(c => c.value);
+  state.selectedForCancel = checked;
+  document.getElementById('cancelBtn').disabled = checked.length === 0;
+}
+
+async function cancelSelected() {
+  if (state.selectedForCancel.length === 0) return;
+  if (!confirm(`Cancel ${state.selectedForCancel.length} appointment(s)?`)) return;
+
+  try {
+    const res = await fetch(API + '/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gateApptIds: state.selectedForCancel }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const msgs = (data.messages || []).map(m => m.desc).join('; ');
+    showToast(`Cancelled: ${msgs || 'OK'}`);
+    state.selectedForCancel = [];
+    loadAppointments();
+    showTab('list');
+
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ─── Create ──────────────────────────────────────────────────────────────────────
+
+async function createAppointment() {
+  const slot = document.getElementById('createSlot').value;
+  const container = document.getElementById('createContainer').value.trim();
+  const type = document.getElementById('createType').value;
+  const date = document.getElementById('createDate').value;
+  const ownChassis = document.getElementById('createOwnChassis').value;
+  const position = document.getElementById('createPosition').value;
+
+  if (!slot) return showToast('Select a time slot first', 'error');
+  if (!container) return showToast('Container number is required', 'error');
+
+  const timeMatch = slot.match(/(\d{2}:\d{2})/);
+  if (!timeMatch) return showToast('Invalid slot format', 'error');
+  const time = timeMatch[1];
+
+  try {
+    const res = await fetch(API + '/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, type, time, container, ownChassis, position }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    showToast('Appointment created! ID: ' + (data.appointmentId || 'OK'));
+    showTab('list');
+    loadAppointments();
+
+    document.getElementById('createSlot').value = '';
+    document.getElementById('createContainer').value = '';
+
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ─── Manage ────────────────────────────────────────────────────────────────────
+
+async function manageAppointment() {
+  const id = document.getElementById('manageId').value;
+  const driver = document.getElementById('manageDriver').value.trim();
+  const truck = document.getElementById('manageTruck').value.trim();
+  const slot = document.getElementById('manageSlot').value.trim();
+
+  if (!id) return showToast('Select an appointment to manage first', 'error');
+
+  const payload = { gateAppt_Id: id };
+  if (driver) payload.driverId_Num = driver;
+  if (truck) payload.truckPlate_Nbr = truck;
+  if (slot) payload.gateApptStart_Tm = slot;
+
+  try {
+    const res = await fetch(API + '/manage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const msgs = (data.messages || []).map(m => m.desc).join('; ');
+    showToast('Updated: ' + (msgs || 'OK'));
+    showTab('list');
+    loadAppointments();
+
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ─── Tabs ────────────────────────────────────────────────────────────────────────────
+
+function showTab(tab) {
+  document.getElementById('tabList').style.display = tab === 'list' ? 'block' : 'none';
+  document.getElementById('tabCreate').style.display = tab === 'create' ? 'block' : 'none';
+  document.getElementById('tabManage').style.display = tab === 'manage' ? 'block' : 'none';
+  document.getElementById('tabCancel').style.display = tab === 'cancel' ? 'block' : 'none';
+
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const tabs = ['list', 'create', 'manage', 'cancel'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+
+  // Show/hide cards
+  const showSlots = ['create'].includes(tab);
+  document.getElementById('slotsCard').style.display = showSlots ? 'block' : 'none';
+  document.getElementById('emptyCard').style.display = tab === 'create' ? 'block' : 'none';
+  document.getElementById('containerCard').style.display = tab === 'create' ? 'block' : 'none';
+}
+
+window.onload = () => {
+  document.getElementById('slotsCard').style.display = 'block';
+  document.getElementById('emptyCard').style.display = 'block';
+  document.getElementById('containerCard').style.display = 'block';
+  document.getElementById('apptsCard').style.display = 'block';
+};
+</script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

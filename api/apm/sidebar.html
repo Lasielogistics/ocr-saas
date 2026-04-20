@@ -1,0 +1,160 @@
+<aside id="sidebar" class="sidebar">
+  <div class="sidebar-header">
+    <img src="/images/lasie_logo.png" alt="Logo" class="sidebar-logo">
+    <button id="collapse-btn" class="collapse-btn" title="Collapse sidebar">
+      <span>☰</span>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <ul>
+      <li><a href="dashboard.html" data-page="dashboard">Dashboard</a></li>
+      <li><a href="containers.html" data-page="containers">Containers</a></li>
+      <li><a href="tabulator.html" data-page="tabulator">Tabulator</a></li>
+      <li><a href="ai.html" data-page="ai">AI Chat</a></li>
+      <li><a href="calendar.html" data-page="calendar">Appointments</a></li>
+      <li><a href="termpoint.html" data-page="termpoint">TERMPoint TMS</a></li>
+    </ul>
+  </nav>
+</aside>
+
+<style>
+  .sidebar {
+    width: 220px;
+    height: 100vh;
+    background: #1e2a38;
+    position: fixed;
+    top: 0;
+    left: 0;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding-top: 0;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    transition: width 0.3s ease;
+    overflow-y: auto;
+  }
+
+  .sidebar.collapsed {
+    width: 60px;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 70px;
+  }
+
+  .sidebar.collapsed .sidebar-header {
+    justify-content: center;
+  }
+
+  .sidebar-logo {
+    width: 100%;
+    height: auto;
+    max-width: 120px;
+  }
+
+  .sidebar.collapsed .sidebar-logo {
+    width: 40px;
+    max-width: 40px;
+  }
+
+  .collapse-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+  }
+
+  .collapse-btn:hover {
+    transform: scale(1.1);
+  }
+
+  .sidebar.collapsed .collapse-btn span {
+    transform: rotate(180deg);
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+  }
+
+  .sidebar-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .sidebar-nav li {
+    margin: 0;
+  }
+
+  .sidebar-nav a {
+    display: block;
+    padding: 0.75rem 1rem;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.2s ease;
+  }
+
+  .sidebar.collapsed .sidebar-nav a {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    font-size: 0;
+  }
+
+  .sidebar.collapsed .sidebar-nav a::first-letter {
+    font-size: 1.5rem;
+  }
+
+  .sidebar-nav a:hover,
+  .sidebar-nav a.active {
+    background: #2d3b4f;
+  }
+
+  /* Adjust main content margin based on sidebar state */
+  body.sidebar-open .main-content,
+  body.sidebar-open .content {
+    margin-left: 220px;
+  }
+
+  body.sidebar-collapsed .main-content,
+  body.sidebar-collapsed .content {
+    margin-left: 60px;
+  }
+
+  /* Scrollbar styling */
+  .sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+</style>
