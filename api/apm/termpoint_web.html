@@ -363,6 +363,7 @@ async function loadSlots() {
   const date = document.getElementById('slotDate').value;
   const type = document.getElementById('slotType').value;
   const container = document.getElementById('slotContainer').value.trim();
+  if (!container) return showToast('Container number is required', 'error');
   const grid = document.getElementById('slotsGrid');
   grid.innerHTML = '<div class="loading">Loading slots</div>';
 
