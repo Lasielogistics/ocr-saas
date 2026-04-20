@@ -5,87 +5,110 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TERMPoint TMS</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Lato', 'Helvetica', Arial, sans-serif; background: #f4f6f9; color: #333; }
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap');
 
-    .header { background: #1b1e2f; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { font-size: 1.4rem; }
-    .header .user { font-size: 0.9rem; opacity: 0.8; }
+    :root {
+      --primary-color: #1f6feb;
+      --primary-hover: #1854d4;
+      --success-color: #1a7f37;
+      --error-color: #cf222e;
+      --warning-color: #bf8700;
+      --bg-light: #f6f8fa;
+      --bg-lighter: #ffffff;
+      --text-dark: #0d1117;
+      --text-muted: #57606a;
+      --border-color: #d0d7de;
+      --card-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      --focus-ring: 0 0 0 3px rgba(31, 111, 235, 0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Source Sans 3', 'Helvetica', Arial, sans-serif; background: var(--bg-light); color: var(--text-dark); }
+    h1, h2, h3, h4 { font-family: 'Poppins', sans-serif; }
+
+    .header { background: var(--primary-color); color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 1.4rem; }
+    .header .user { font-size: 0.9rem; opacity: 0.9; }
 
     .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
 
-    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem; overflow: hidden; }
-    .card-header { background: #2c3e50; color: #fff; padding: 0.75rem 1.25rem; font-weight: 600; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; }
-    .card-header .badge { background: #27ae60; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; }
-    .card-header .badge.error { background: #e74c3c; }
-    .card-header .badge.warning { background: #f39c12; }
+    .card { background: var(--bg-lighter); border-radius: 12px; box-shadow: var(--card-shadow); margin-bottom: 1.5rem; overflow: hidden; border: 1px solid var(--border-color); }
+    .card-header { background: var(--primary-color); color: #fff; padding: 0.85rem 1.25rem; font-weight: 600; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; font-family: 'Poppins', sans-serif; }
+    .card-header .badge { background: rgba(255,255,255,0.2); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; }
+    .card-header .badge.error { background: var(--error-color); }
+    .card-header .badge.warning { background: var(--warning-color); }
     .card-body { padding: 1.25rem; }
 
     .auth-section { text-align: center; padding: 3rem; }
-    .auth-section p { color: #666; margin-bottom: 1rem; }
-    .auth-section .terminal { font-size: 0.85rem; color: #888; margin-top: 0.5rem; }
+    .auth-section p { color: var(--text-muted); margin-bottom: 1rem; }
+    .auth-section .terminal { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
 
     .status-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .status-item { background: #fff; padding: 0.75rem 1rem; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); font-size: 0.85rem; }
-    .status-item .label { color: #888; display: block; }
-    .status-item .value { font-weight: 600; color: #2c3e50; }
+    .status-item { background: var(--bg-lighter); padding: 0.75rem 1rem; border-radius: 8px; box-shadow: var(--card-shadow); font-size: 0.85rem; border: 1px solid var(--border-color); }
+    .status-item .label { color: var(--text-muted); display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .status-item .value { font-weight: 600; color: var(--text-dark); }
 
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; }
-    .slot { padding: 0.5rem; border: 2px solid #e0e0e0; border-radius: 6px; text-align: center; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
-    .slot:hover { border-color: #3498db; background: #ebf5fb; }
-    .slot.selected { border-color: #27ae60; background: #eafaf1; color: #27ae60; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.5rem; }
+    .slot { padding: 0.6rem 0.5rem; border: 2px solid var(--border-color); border-radius: 8px; text-align: center; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; background: var(--bg-lighter); }
+    .slot:hover { border-color: var(--primary-color); background: #ebf5fb; box-shadow: 0 2px 8px rgba(31,111,235,0.15); }
+    .slot.selected { border-color: var(--success-color); background: #eafaf1; color: var(--success-color); font-weight: 600; box-shadow: 0 2px 8px rgba(26,127,55,0.15); }
 
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
 
     .field { margin-bottom: 1rem; }
-    .field label { display: block; font-size: 0.8rem; font-weight: 600; color: #555; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    .field input, .field select, .field textarea { width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; }
-    .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #3498db; }
+    .field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: 'Poppins', sans-serif; }
+    .field input, .field select, .field textarea { width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; font-family: 'Source Sans 3', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; }
+    .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: var(--focus-ring); }
+    .field input[readonly] { background: var(--bg-light); }
 
-    .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-    .btn-primary { background: #3498db; color: #fff; }
-    .btn-primary:hover { background: #2980b9; }
-    .btn-success { background: #27ae60; color: #fff; }
-    .btn-success:hover { background: #1e8449; }
-    .btn-danger { background: #e74c3c; color: #fff; }
-    .btn-danger:hover { background: #c0392b; }
-    .btn-outline { background: transparent; border: 1px solid #ddd; color: #555; }
-    .btn-outline:hover { background: #f8f9fa; }
+    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.2rem; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-family: 'Poppins', sans-serif; }
+    .btn-primary { background: var(--primary-color); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(31,111,235,0.3); }
+    .btn-success { background: var(--success-color); color: #fff; }
+    .btn-success:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(26,127,55,0.3); }
+    .btn-danger { background: var(--error-color); color: #fff; }
+    .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(207,34,46,0.3); }
+    .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); }
+    .btn-outline:hover { background: var(--bg-light); }
 
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    th { background: #f8f9fa; text-align: left; padding: 0.6rem 0.75rem; font-weight: 600; color: #555; border-bottom: 2px solid #e0e0e0; }
-    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #f0f0f0; }
-    tr:hover td { background: #f8f9fa; }
-    .status-chip { padding: 0.2rem 0.5rem; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
-    .status-C { background: #d4edda; color: #155724; }
-    .status-W { background: #fff3cd; color: #856404; }
-    .status-P { background: #cce5ff; color: #004085; }
-    .status-R { background: #f8d7da; color: #721c24; }
-    .status-D { background: #d1ecf1; color: #0c5460; }
-    .status-X { background: #e2e3e5; color: #383d41; }
+    .table-wrapper { overflow-x: auto; border-radius: 12px; background: var(--bg-lighter); box-shadow: var(--card-shadow); border: 1px solid var(--border-color); }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    thead th { position: sticky; top: 0; background: var(--bg-light); padding: 0.75rem; font-weight: 600; border-bottom: 2px solid var(--border-color); font-family: 'Poppins', sans-serif; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); }
+    tbody tr:nth-child(even) { background: var(--bg-light); }
+    tbody tr:hover { background: #f0f6ff; }
+    td { padding: 0.7rem 0.75rem; border-bottom: 1px solid var(--border-color); }
 
-    .tabs { display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 1rem; flex-wrap: wrap; gap: 0; }
-    .tab { padding: 0.75rem 1.5rem; cursor: pointer; font-weight: 600; color: #888; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
-    .tab.active { color: #3498db; border-bottom-color: #3498db; }
-    .tab:hover { color: #3498db; }
-    .tab.danger { color: #e74c3c; }
-    .tab.danger:hover { color: #c0392b; }
+    .status-badge { padding: 0.25rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
+    .status-C, .badge-confirmed { background: #dcfce7; color: #166534; }
+    .status-W, .badge-waiting { background: #fef3c7; color: #92400e; }
+    .status-P, .badge-pending { background: #dbeafe; color: #1e40af; }
+    .status-R, .badge-rejected { background: #fee2e2; color: #991b1b; }
+    .status-D, .badge-dispatched { background: #d1ecf1; color: #0c5460; }
+    .status-X, .badge-cancelled { background: #e2e3e5; color: #383d41; }
 
-    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 0.8rem 1.2rem; border-radius: 6px; color: #fff; font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; z-index: 1000; }
-    .toast.show { opacity: 1; }
-    .toast.success { background: #27ae60; }
-    .toast.error { background: #e74c3c; }
+    .tabs { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0; }
+    .tab-btn { padding: 0.75rem 1.25rem; cursor: pointer; font-weight: 500; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'Poppins', sans-serif; font-size: 0.9rem; }
+    .tab-btn:hover { color: var(--primary-color); }
+    .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 600; }
+    .tab-btn.danger { color: var(--text-muted); }
+    .tab-btn.danger:hover { color: var(--error-color); }
 
-    .loading { text-align: center; padding: 2rem; color: #888; }
-    .loading::after { content: '...'; animation: dots 1.5s infinite; }
-    @keyframes dots { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 0.85rem 1.25rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; opacity: 0; transition: opacity 0.3s, transform 0.3s; z-index: 9999; transform: translateY(10px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #dcfce7; color: #166534; border-left: 4px solid var(--success-color); }
+    .toast.error { background: #fee2e2; color: #991b1b; border-left: 4px solid var(--error-color); }
 
-    .empty { text-align: center; padding: 2rem; color: #aaa; font-size: 0.9rem; }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--border-color); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 1.5rem auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem; }
 
     .info-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
-    .info-tag { background: #e8f4fd; color: #2980b9; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-    .section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #aaa; margin: 1rem 0 0.5rem; }
+    .info-tag { background: #e8f4fd; color: #0052cc; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin: 1rem 0 0.75rem; font-family: 'Poppins', sans-serif; }
+
+    .action-row { margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
   </style>
 </head>
 <body>
@@ -120,7 +143,7 @@
   <div class="card" id="slotsCard" style="display:none">
     <div class="card-header">Available Time Slots <span class="badge" id="slotsDate">—</span></div>
     <div class="card-body">
-      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; align-items:flex-end;">
         <div class="field" style="margin:0">
           <label>Date</label>
           <input type="date" id="slotDate" value="2026-04-20">
@@ -152,7 +175,7 @@
   <div class="card" id="emptyCard" style="display:none">
     <div class="card-header">Empty Appointment Availability <span class="badge" id="emptyDate">—</span></div>
     <div class="card-body">
-      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; align-items:flex-end;">
         <div class="field" style="margin:0">
           <label>Date</label>
           <input type="date" id="emptyDateInput" value="2026-04-20">
@@ -176,7 +199,7 @@
   <div class="card" id="containerCard" style="display:none">
     <div class="card-header">Container Availability</div>
     <div class="card-body">
-      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; align-items:flex-end;">
         <div class="field" style="margin:0; flex:1;">
           <label>Container Numbers (comma separated)</label>
           <input type="text" id="containerInput" placeholder="FSCU6954495, TEMU8802667" style="text-transform:uppercase">
@@ -199,15 +222,15 @@
     </div>
     <div class="card-body">
       <div class="tabs">
-        <div class="tab active" onclick="showTab('list')">List</div>
-        <div class="tab" onclick="showTab('create')">New Appointment</div>
-        <div class="tab" onclick="showTab('manage')">Manage</div>
-        <div class="tab danger" onclick="showTab('cancel')">Cancel</div>
+        <button class="tab-btn active" onclick="showTab('list')">List</button>
+        <button class="tab-btn" onclick="showTab('create')">New Appointment</button>
+        <button class="tab-btn" onclick="showTab('manage')">Manage</button>
+        <button class="tab-btn danger" onclick="showTab('cancel')">Cancel</button>
       </div>
 
       <!-- List Tab -->
       <div id="tabList">
-        <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; align-items:flex-end;">
           <div class="field" style="margin:0">
             <label>From Date</label>
             <input type="date" id="apptFrom" value="2026-04-20">
@@ -262,7 +285,7 @@
             <input type="number" id="createPosition" value="0" min="0">
           </div>
         </div>
-        <div style="margin-top:1rem; display:flex; gap:1rem;">
+        <div class="action-row">
           <button class="btn btn-success" onclick="createAppointment()">Create Appointment</button>
           <button class="btn btn-outline" onclick="showTab('list')">Cancel</button>
         </div>
@@ -289,7 +312,7 @@
             <input type="text" id="manageSlot" placeholder="e.g. 09:00 - 09:30">
           </div>
         </div>
-        <div style="margin-top:1rem; display:flex; gap:1rem;">
+        <div class="action-row">
           <button class="btn btn-primary" onclick="manageAppointment()">Update Appointment</button>
           <button class="btn btn-outline" onclick="showTab('list')">Cancel</button>
         </div>
@@ -372,7 +395,7 @@ async function loadSlots() {
   const type = document.getElementById('slotType').value;
   const container = document.getElementById('slotContainer').value.trim();
   const grid = document.getElementById('slotsGrid');
-  grid.innerHTML = '<div class="loading">Loading slots</div>';
+  grid.innerHTML = '<div class="spinner"></div>';
 
   try {
     const res = await fetch(API + '/slots', {
@@ -418,7 +441,7 @@ async function loadEmptyAvailability() {
   const date = document.getElementById('emptyDateInput').value;
   const type = document.getElementById('emptyType').value;
   const grid = document.getElementById('emptyGrid');
-  grid.innerHTML = '<div class="loading">Checking availability</div>';
+  grid.innerHTML = '<div class="spinner"></div>';
 
   try {
     const res = await fetch(API + '/empty-availability', {
@@ -438,19 +461,21 @@ async function loadEmptyAvailability() {
     }
 
     grid.innerHTML = `
-      <table>
-        <thead><tr><th>Time Slot</th><th>Total Slots</th><th>Appointments</th><th>Available</th></tr></thead>
-        <tbody>
-          ${slots.map(s => `
-            <tr>
-              <td>${s.time || '—'}</td>
-              <td>${s.total || 0}</td>
-              <td>${s.appointments || 0}</td>
-              <td><b style="color:${(s.available || 0) > 0 ? '#27ae60' : '#e74c3c'}">${s.available || 0}</b></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Time Slot</th><th>Total Slots</th><th>Appointments</th><th>Available</th></tr></thead>
+          <tbody>
+            ${slots.map(s => `
+              <tr>
+                <td>${s.time || '—'}</td>
+                <td>${s.total || 0}</td>
+                <td>${s.appointments || 0}</td>
+                <td><b style="color:${(s.available || 0) > 0 ? 'var(--success-color)' : 'var(--error-color)'}">${s.available || 0}</b></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
     `;
 
   } catch (e) {
@@ -467,7 +492,7 @@ async function checkContainerAvailability() {
   if (!input) return showToast('Please enter container numbers', 'error');
 
   const containers = input.split(',').map(c => c.trim()).filter(c => c);
-  resultDiv.innerHTML = '<div class="loading">Checking containers</div>';
+  resultDiv.innerHTML = '<div class="spinner"></div>';
 
   try {
     const res = await fetch(API + '/container-availability', {
@@ -486,19 +511,21 @@ async function checkContainerAvailability() {
     }
 
     resultDiv.innerHTML = `
-      <table>
-        <thead><tr><th>Container #</th><th>Status</th><th>Shipping Line</th><th>Notes</th></tr></thead>
-        <tbody>
-          ${containers_list.map(c => `
-            <tr>
-              <td>${c.Container_Num || '—'}</td>
-              <td><span class="status-chip status-${c.Available_Flg === 'Y' ? 'C' : 'R'}">${c.Available_Flg === 'Y' ? 'Available' : 'Not Available'}</span></td>
-              <td>${c.Line_Id || '—'}</td>
-              <td>${c.Remarks || '—'}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Container #</th><th>Status</th><th>Shipping Line</th><th>Notes</th></tr></thead>
+          <tbody>
+            ${containers_list.map(c => `
+              <tr>
+                <td>${c.Container_Num || '—'}</td>
+                <td><span class="status-badge status-${c.Available_Flg === 'Y' ? 'C' : 'R'}">${c.Available_Flg === 'Y' ? 'Available' : 'Not Available'}</span></td>
+                <td>${c.Line_Id || '—'}</td>
+                <td>${c.Remarks || '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
     `;
 
     // Show messages
@@ -520,7 +547,7 @@ async function loadAppointments() {
   const to = document.getElementById('apptTo').value;
   const table = document.getElementById('appointmentsTable');
 
-  table.innerHTML = '<div class="loading">Loading appointments</div>';
+  table.innerHTML = '<div class="spinner"></div>';
 
   try {
     const res = await fetch(API + '/appointments', {
@@ -539,26 +566,28 @@ async function loadAppointments() {
     }
 
     table.innerHTML = `
-      <table>
-        <thead><tr>
-          <th>Appt #</th><th>Date</th><th>Slot</th><th>Container</th>
-          <th>Type</th><th>Status</th><th>Driver</th><th>Truck</th>
-        </tr></thead>
-        <tbody>
-          ${state.appointments.map(a => `
-            <tr class="appt-row" data-id="${a.gateAppt_Id}" onclick="selectAppointmentRow(this, ${a.gateAppt_Id})">
-              <td>${a.gateAppt_Id || '—'}</td>
-              <td>${a.gateAppt_Dt || '—'}</td>
-              <td>${a.gateApptStart_Tm || '—'}</td>
-              <td>${a.container_Num || '—'}</td>
-              <td>${a.apptType_Cd || '—'}</td>
-              <td><span class="status-chip status-${a.apptStatus_Cd || ''}">${a.apptStatus_Cd || '—'}</span></td>
-              <td>${a.driverId_Num || '—'}</td>
-              <td>${a.truckPlate_Nbr || '—'}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr>
+            <th>Appt #</th><th>Date</th><th>Slot</th><th>Container</th>
+            <th>Type</th><th>Status</th><th>Driver</th><th>Truck</th>
+          </tr></thead>
+          <tbody>
+            ${state.appointments.map(a => `
+              <tr class="appt-row" data-id="${a.gateAppt_Id}" onclick="selectAppointmentRow(this, ${a.gateAppt_Id})">
+                <td>${a.gateAppt_Id || '—'}</td>
+                <td>${a.gateAppt_Dt || '—'}</td>
+                <td>${a.gateApptStart_Tm || '—'}</td>
+                <td>${a.container_Num || '—'}</td>
+                <td>${a.apptType_Cd || '—'}</td>
+                <td><span class="status-badge status-${a.apptStatus_Cd || ''}">${a.apptStatus_Cd || '—'}</span></td>
+                <td>${a.driverId_Num || '—'}</td>
+                <td>${a.truckPlate_Nbr || '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
     `;
 
     renderCancelTable();
@@ -571,7 +600,9 @@ async function loadAppointments() {
 function selectAppointmentRow(el, id) {
   // Highlight and fill manage form
   document.querySelectorAll('.appt-row').forEach(r => r.style.background = '');
-  el.style.background = '#e8f4fd';
+  el.style.background = 'var(--primary-color)';
+  el.style.color = '#fff';
+  el.style.textShadow = 'none';
   state.selectedForManage = id;
   document.getElementById('manageId').value = id;
   const appt = state.appointments.find(a => a.gateAppt_Id == id);
@@ -592,25 +623,27 @@ function renderCancelTable() {
   }
 
   table.innerHTML = `
-    <table>
-      <thead><tr>
-        <th><input type="checkbox" id="selectAllCancel" onchange="toggleSelectAllCancel(this)"></th>
-        <th>Appt #</th><th>Date</th><th>Slot</th><th>Container</th><th>Type</th><th>Status</th>
-      </tr></thead>
-      <tbody>
-        ${cancelable.map(a => `
-          <tr>
-            <td><input type="checkbox" class="cancel-check" value="${a.gateAppt_Id}" onchange="updateCancelBtn()"></td>
-            <td>${a.gateAppt_Id}</td>
-            <td>${a.gateAppt_Dt}</td>
-            <td>${a.gateApptStart_Tm}</td>
-            <td>${a.container_Num}</td>
-            <td>${a.apptType_Cd}</td>
-            <td><span class="status-chip status-${a.apptStatus_Cd}">${a.apptStatus_Cd}</span></td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>
+          <th><input type="checkbox" id="selectAllCancel" onchange="toggleSelectAllCancel(this)"></th>
+          <th>Appt #</th><th>Date</th><th>Slot</th><th>Container</th><th>Type</th><th>Status</th>
+        </tr></thead>
+        <tbody>
+          ${cancelable.map(a => `
+            <tr>
+              <td><input type="checkbox" class="cancel-check" value="${a.gateAppt_Id}" onchange="updateCancelBtn()"></td>
+              <td>${a.gateAppt_Id}</td>
+              <td>${a.gateAppt_Dt}</td>
+              <td>${a.gateApptStart_Tm}</td>
+              <td>${a.container_Num}</td>
+              <td>${a.apptType_Cd}</td>
+              <td><span class="status-badge status-${a.apptStatus_Cd}">${a.apptStatus_Cd}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
   `;
 }
 
@@ -729,7 +762,7 @@ function showTab(tab) {
   document.getElementById('tabManage').style.display = tab === 'manage' ? 'block' : 'none';
   document.getElementById('tabCancel').style.display = tab === 'cancel' ? 'block' : 'none';
 
-  document.querySelectorAll('.tab').forEach((t, i) => {
+  document.querySelectorAll('.tab-btn').forEach((t, i) => {
     const tabs = ['list', 'create', 'manage', 'cancel'];
     t.classList.toggle('active', tabs[i] === tab);
   });
