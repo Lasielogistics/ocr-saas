@@ -166,16 +166,7 @@
       </div>
     </div>
     <div class="card-body">
-      <div class="tabs">
-        <div class="tab active" onclick="showTab('list')">List</div>
-        <div class="tab" onclick="showTab('create')">New Appointment</div>
-        <div class="tab" onclick="showTab('manage')">Manage</div>
-        <div class="tab danger" onclick="showTab('cancel')">Cancel</div>
-      </div>
-
-      <!-- List Tab -->
-      <div id="tabList">
-        <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; align-items:flex-end;">
           <div class="field" style="margin:0">
             <label>From Date</label>
             <input type="date" id="apptFrom" value="2026-04-20">
@@ -189,88 +180,6 @@
           </div>
         </div>
         <div id="appointmentsTable"></div>
-      </div>
-
-      <!-- Create Tab -->
-      <div id="tabCreate" style="display:none">
-        <div class="section-title">Appointment Details</div>
-        <div class="form-grid">
-          <div class="field">
-            <label>Appointment Type</label>
-            <select id="createType">
-              <option value="IP">Import Pickup</option>
-              <option value="ID">Import Drop Off</option>
-              <option value="XP">Export Pickup</option>
-              <option value="XD">Export Drop Off</option>
-              <option value="MP">Empty Pickup</option>
-              <option value="MD">Empty Drop Off</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Date</label>
-            <input type="date" id="createDate" value="2026-04-25">
-          </div>
-          <div class="field">
-            <label>Time Slot</label>
-            <input type="text" id="createSlot" placeholder="e.g. 08:00 - 08:30" readonly>
-          </div>
-          <div class="field">
-            <label>Container #</label>
-            <input type="text" id="createContainer" placeholder="MSKU6552574" style="text-transform:uppercase">
-          </div>
-          <div class="field">
-            <label>Driver Own Chassis</label>
-            <select id="createOwnChassis">
-              <option value="Y">Yes</option>
-              <option value="N">No</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Position on Truck</label>
-            <input type="number" id="createPosition" value="0" min="0">
-          </div>
-        </div>
-        <div style="margin-top:1rem; display:flex; gap:1rem;">
-          <button class="btn btn-success" onclick="createAppointment()">Create Appointment</button>
-          <button class="btn btn-outline" onclick="showTab('list')">Cancel</button>
-        </div>
-      </div>
-
-      <!-- Manage Tab -->
-      <div id="tabManage" style="display:none">
-        <p style="color:#888; font-size:0.85rem; margin-bottom:1rem;">Select an appointment from the list above to reassign driver, truck, or slot.</p>
-        <div class="form-grid">
-          <div class="field">
-            <label>Gate Appt ID</label>
-            <input type="text" id="manageId" placeholder="e.g. 54100654" readonly>
-          </div>
-          <div class="field">
-            <label>Driver ID</label>
-            <input type="text" id="manageDriver" placeholder="Driver ID Number">
-          </div>
-          <div class="field">
-            <label>Truck Plate #</label>
-            <input type="text" id="manageTruck" placeholder="Truck Plate Number">
-          </div>
-          <div class="field">
-            <label>New Slot Time</label>
-            <input type="text" id="manageSlot" placeholder="e.g. 09:00 - 09:30">
-          </div>
-        </div>
-        <div style="margin-top:1rem; display:flex; gap:1rem;">
-          <button class="btn btn-primary" onclick="manageAppointment()">Update Appointment</button>
-          <button class="btn btn-outline" onclick="showTab('list')">Cancel</button>
-        </div>
-      </div>
-
-      <!-- Cancel Tab -->
-      <div id="tabCancel" style="display:none">
-        <p style="color:#888; font-size:0.85rem; margin-bottom:1rem;">Select appointments to cancel. Only Confirmed (C), Tentative (W), or Rejected (R) appointments can be cancelled.</p>
-        <div id="cancelTable"></div>
-        <div style="margin-top:1rem;">
-          <button class="btn btn-danger" onclick="cancelSelected()" id="cancelBtn" disabled>Cancel Selected</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -511,11 +420,11 @@ async function loadAppointments() {
       <table>
         <thead><tr>
           <th>Appt #</th><th>Date</th><th>Slot</th><th>Container</th>
-          <th>Type</th><th>Status</th><th>Driver</th><th>Truck</th>
+          <th>Type</th><th>Status</th><th>Driver</th><th>Truck</th><th></th>
         </tr></thead>
         <tbody>
           ${state.appointments.map(a => `
-            <tr class="appt-row" data-id="${a.gateAppt_Id}" onclick="selectAppointmentRow(this, ${a.gateAppt_Id})">
+            <tr class="appt-row" data-id="${a.gateAppt_Id}">
               <td>${a.gateAppt_Id || '—'}</td>
               <td>${a.gateAppt_Dt || '—'}</td>
               <td>${a.gateApptStart_Tm || '—'}</td>
@@ -524,95 +433,34 @@ async function loadAppointments() {
               <td><span class="status-chip status-${a.apptStatus_Cd || ''}">${a.apptStatus_Cd || '—'}</span></td>
               <td>${a.driverId_Num || '—'}</td>
               <td>${a.truckPlate_Nbr || '—'}</td>
+              <td>
+                ${['C', 'W', 'R'].includes(a.apptStatus_Cd) ? `<button class="btn btn-danger" style="padding:0.25rem 0.6rem; font-size:0.75rem;" onclick="cancelAppointment(${a.gateAppt_Id})">Cancel</button>` : ''}
+              </td>
             </tr>
           `).join('')}
         </tbody>
       </table>
     `;
 
-    renderCancelTable();
-
+    
   } catch (e) {
     table.innerHTML = '<div class="empty" style="color:#e74c3c">Error: ' + e.message + '</div>';
   }
 }
 
-function selectAppointmentRow(el, id) {
-  // Highlight and fill manage form
-  document.querySelectorAll('.appt-row').forEach(r => r.style.background = '');
-  el.style.background = '#e8f4fd';
-  state.selectedForManage = id;
-  document.getElementById('manageId').value = id;
-  const appt = state.appointments.find(a => a.gateAppt_Id == id);
-  if (appt) {
-    document.getElementById('manageDriver').value = appt.driverId_Num || '';
-    document.getElementById('manageTruck').value = appt.truckPlate_Nbr || '';
-    document.getElementById('manageSlot').value = appt.gateApptStart_Tm || '';
-  }
-}
-
-function renderCancelTable() {
-  const table = document.getElementById('cancelTable');
-  const cancelable = state.appointments.filter(a => ['C', 'W', 'R'].includes(a.apptStatus_Cd));
-
-  if (cancelable.length === 0) {
-    table.innerHTML = '<div class="empty">No cancellable appointments found (only C, W, R)</div>';
-    return;
-  }
-
-  table.innerHTML = `
-    <table>
-      <thead><tr>
-        <th><input type="checkbox" id="selectAllCancel" onchange="toggleSelectAllCancel(this)"></th>
-        <th>Appt #</th><th>Date</th><th>Slot</th><th>Container</th><th>Type</th><th>Status</th>
-      </tr></thead>
-      <tbody>
-        ${cancelable.map(a => `
-          <tr>
-            <td><input type="checkbox" class="cancel-check" value="${a.gateAppt_Id}" onchange="updateCancelBtn()"></td>
-            <td>${a.gateAppt_Id}</td>
-            <td>${a.gateAppt_Dt}</td>
-            <td>${a.gateApptStart_Tm}</td>
-            <td>${a.container_Num}</td>
-            <td>${a.apptType_Cd}</td>
-            <td><span class="status-chip status-${a.apptStatus_Cd}">${a.apptStatus_Cd}</span></td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
-}
-
-function toggleSelectAllCancel(el) {
-  document.querySelectorAll('.cancel-check').forEach(c => c.checked = el.checked);
-  updateCancelBtn();
-}
-
-function updateCancelBtn() {
-  const checked = [...document.querySelectorAll('.cancel-check:checked')].map(c => c.value);
-  state.selectedForCancel = checked;
-  document.getElementById('cancelBtn').disabled = checked.length === 0;
-}
-
-async function cancelSelected() {
-  if (state.selectedForCancel.length === 0) return;
-  if (!confirm(`Cancel ${state.selectedForCancel.length} appointment(s)?`)) return;
-
+async function cancelAppointment(id) {
+  if (!confirm('Cancel this appointment?')) return;
   try {
     const res = await fetch(API + '/cancel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gateApptIds: state.selectedForCancel }),
+      body: JSON.stringify({ gateApptIds: [id] }),
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-
     const msgs = (data.messages || []).map(m => m.desc).join('; ');
-    showToast(`Cancelled: ${msgs || 'OK'}`);
-    state.selectedForCancel = [];
+    showToast(msgs || 'Cancelled');
     loadAppointments();
-    showTab('list');
-
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
@@ -650,40 +498,6 @@ async function createAppointment() {
 
     document.getElementById('createSlot').value = '';
     document.getElementById('createContainer').value = '';
-
-  } catch (e) {
-    showToast('Error: ' + e.message, 'error');
-  }
-}
-
-// ─── Manage ────────────────────────────────────────────────────────────────────
-
-async function manageAppointment() {
-  const id = document.getElementById('manageId').value;
-  const driver = document.getElementById('manageDriver').value.trim();
-  const truck = document.getElementById('manageTruck').value.trim();
-  const slot = document.getElementById('manageSlot').value.trim();
-
-  if (!id) return showToast('Select an appointment to manage first', 'error');
-
-  const payload = { gateAppt_Id: id };
-  if (driver) payload.driverId_Num = driver;
-  if (truck) payload.truckPlate_Nbr = truck;
-  if (slot) payload.gateApptStart_Tm = slot;
-
-  try {
-    const res = await fetch(API + '/manage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    const msgs = (data.messages || []).map(m => m.desc).join('; ');
-    showToast('Updated: ' + (msgs || 'OK'));
-    showTab('list');
-    loadAppointments();
 
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
