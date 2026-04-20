@@ -190,6 +190,11 @@
 <script>
 const API = window.location.origin;
 
+const STATUS_LABELS = { C: 'Confirmed', W: 'Waiting', P: 'Pending', R: 'Rejected', D: 'Dispatched', X: 'Cancelled' };
+const CANCELLABLE = ['C', 'W', 'R'];
+
+function statusLabel(code) { return STATUS_LABELS[code] || code || '—'; }
+
 let state = {
   iamToken: null,
   jwt: null,
@@ -430,11 +435,11 @@ async function loadAppointments() {
               <td>${a.gateApptStart_Tm || '—'}</td>
               <td>${a.container_Num || '—'}</td>
               <td>${a.apptType_Cd || '—'}</td>
-              <td><span class="status-chip status-${a.apptStatus_Cd || ''}">${a.apptStatus_Cd || '—'}</span></td>
+              <td><span class="status-chip status-${a.apptStatus_Cd || ''}">${statusLabel(a.apptStatus_Cd)}</span></td>
               <td>${a.driverId_Num || '—'}</td>
               <td>${a.truckPlate_Nbr || '—'}</td>
               <td>
-                ${['C', 'W', 'R'].includes(a.apptStatus_Cd) ? `<button class="btn btn-danger" style="padding:0.25rem 0.6rem; font-size:0.75rem;" onclick="cancelAppointment(${a.gateAppt_Id})">Cancel</button>` : ''}
+                ${CANCELLABLE.includes(a.apptStatus_Cd) ? `<button class="btn btn-danger" style="padding:0.25rem 0.6rem; font-size:0.75rem;" onclick="cancelAppointment(${a.gateAppt_Id})">Cancel</button>` : ''}
               </td>
             </tr>
           `).join('')}
