@@ -190,7 +190,7 @@
 <script>
 const API = window.location.origin;
 
-const STATUS_LABELS = { C: 'Confirmed', W: 'Waiting', P: 'Pending', R: 'Rejected', D: 'Dispatched', X: 'Cancelled' };
+const STATUS_LABELS = { C: 'Confirmed', W: 'Tentative', P: 'Pending', R: 'Rejected', D: 'Dispatched', X: 'Cancelled' };
 const CANCELLABLE = ['C', 'W', 'R'];
 
 function statusLabel(code) { return STATUS_LABELS[code] || code || '—'; }
