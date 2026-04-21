@@ -107,40 +107,6 @@
     <div class="status-item"><span class="label">Termpoint JWT</span><span class="value" id="jwtStatus" style="color:#888">—</span></div>
   </div>
 
-  <!-- Available Slots -->
-  <div class="card" id="slotsCard" style="display:none">
-    <div class="card-header">Available Time Slots <span class="badge" id="slotsDate">—</span></div>
-    <div class="card-body">
-      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
-        <div class="field" style="margin:0">
-          <label>Date</label>
-          <input type="date" id="slotDate" value="2026-04-20">
-        </div>
-        <div class="field" style="margin:0">
-          <label>Type</label>
-          <select id="slotType">
-            <option value="IP">Import Pickup</option>
-            <option value="ID">Import Drop Off</option>
-            <option value="XP">Export Pickup</option>
-            <option value="XD">Export Drop Off</option>
-            <option value="MP">Empty Pickup</option>
-            <option value="MD">Empty Drop Off</option>
-          </select>
-        </div>
-        <div class="field" style="margin:0">
-          <label>Container # (for IP)</label>
-          <input type="text" id="slotContainer" placeholder="Container Number" style="text-transform:uppercase">
-        </div>
-        <div class="field" style="margin:0; display:flex; align-items:flex-end;">
-          <button class="btn btn-primary" onclick="loadSlots()" style="height:38px">Check Slots</button>
-        </div>
-      </div>
-      <div id="slotsGrid" class="grid"></div>
-    </div>
-  </div>
-
-  <!-- Empty Appointment Availability -->
-  <!-- Container Availability -->
   <div class="card" id="containerCard" style="display:none">
     <div class="card-header">Container Availability</div>
     <div class="card-body">
@@ -162,6 +128,7 @@
     <div class="card-header">
       My Appointments
       <div style="display:flex; gap:0.5rem;">
+        <button class="btn btn-primary" onclick="showCreateAppointment()" style="padding:0.3rem 0.8rem; font-size:0.75rem">+ Create Appointment</button>
         <button class="btn btn-outline" onclick="loadAppointments()" style="padding:0.3rem 0.8rem; font-size:0.75rem">Refresh</button>
       </div>
     </div>
@@ -179,7 +146,36 @@
             <button class="btn btn-outline" onclick="loadAppointments()" style="height:38px">Search</button>
           </div>
         </div>
+        <div id="createAppointmentForm" style="margin-bottom:1rem; padding:0.75rem; background:#f8f9fa; border-radius:6px; border:1px solid #e0e0e0">
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
+            <div class="field" style="margin:0">
+              <label>Move Type</label>
+              <select id="createMoveType">
+                <option value="IP">Import Pickup</option>
+                <option value="ID">Import Drop Off</option>
+                <option value="XP">Export Pickup</option>
+                <option value="XD">Export Drop Off</option>
+                <option value="MP">Empty Pickup</option>
+                <option value="MD">Empty Drop Off</option>
+              </select>
+            </div>
+            <div class="field" style="margin:0; flex:1; min-width:160px;">
+              <label>Container #</label>
+              <input type="text" id="createContainer" placeholder="Container Number" style="text-transform:uppercase">
+            </div>
+            <div class="field" style="margin:0; display:flex; align-items:flex-end;">
+              <button class="btn btn-outline" onclick="hideCreateAppointment()" style="height:38px">Cancel</button>
+            </div>
+            <div class="field" style="margin:0; display:flex; align-items:flex-end;">
+              <button class="btn btn-primary" onclick="loadCreateSlots()" style="height:38px">Submit</button>
+            </div>
+          </div>
+          <div id="createSlotsResults" style="margin-top:1rem"></div>
+        </div>
         <div id="appointmentsTable"></div>
+        <div id="rescheduleForm" style="display:none; margin-top:1rem; padding-top:1rem; border-top:2px solid #e0e0e0">
+          <div id="rescheduleSlotsResults" style="margin-top:0.5rem"></div>
+        </div>
     </div>
   </div>
 
@@ -191,9 +187,12 @@
 const API = window.location.origin;
 
 const STATUS_LABELS = { C: 'Confirmed', W: 'Tentative', P: 'Pending', R: 'Rejected', D: 'Dispatched', X: 'Cancelled' };
-const CANCELLABLE = ['C', 'W', 'R'];
+const TYPE_LABELS = { IP: 'Import Pickup', ID: 'Import Drop Off', XP: 'Export Pickup', XD: 'Export Drop Off', MP: 'Empty Pickup', MD: 'Empty Drop Off' };
+const CANCELLABLE = ['C', 'W', 'P'];
+const RESCHEDULABLE = ['C', 'W'];
 
 function statusLabel(code) { return STATUS_LABELS[code] || code || '—'; }
+function typeLabel(code) { return TYPE_LABELS[code] || code || '—'; }
 
 let state = {
   iamToken: null,
@@ -242,62 +241,87 @@ async function connect() {
     if (statusBar) statusBar.style.display = 'flex';
 
     showToast('Connected successfully');
-    loadSlots();
     loadAppointments();
 
   } catch (e) {
     const authBadge = document.getElementById('authBadge');
-    if (authBadge) { authBadge.textContent = 'ERROR'; authBadge.style.background = '#e74c3c'; }
+    const connectBtn = document.getElementById('connectBtn');
+    if (authBadge) { authBadge.textContent = 'DISCONNECTED'; authBadge.style.background = '#e74c3c'; }
+    if (connectBtn) { connectBtn.style.display = 'inline-block'; connectBtn.textContent = 'Retry'; }
     showToast('Connection failed: ' + e.message, 'error');
   }
 }
 
 // ─── Slots ───────────────────────────────────────────────────────────────────
 
+function formatDateDisplay(d) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getMonth() + 1)}:${pad(d.getDate())}:${d.getFullYear()}`;
+}
+
+function formatDateISO(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function getDatesAhead(days) {
+  const dates = [];
+  const today = new Date();
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    dates.push({ display: formatDateDisplay(d), iso: formatDateISO(d) });
+  }
+  return dates;
+}
+
 async function loadSlots() {
-  const date = document.getElementById('slotDate').value;
   const type = document.getElementById('slotType').value;
   const container = document.getElementById('slotContainer').value.trim();
   if (!container) return showToast('Container number is required', 'error');
-  const grid = document.getElementById('slotsGrid');
-  grid.innerHTML = '<div class="loading">Loading slots</div>';
+  const containerDiv = document.getElementById('slotsContainer');
+  containerDiv.innerHTML = '<div class="loading">Loading slots for 4 days</div>';
+
+  const dates = getDatesAhead(4);
+  const typeLabel = document.getElementById('slotType').options[document.getElementById('slotType').selectedIndex].text;
+  document.getElementById('slotsDate').textContent = container + ' / ' + typeLabel;
 
   try {
-    const res = await fetch(API + '/slots', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, type, container }),
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    const results = await Promise.all(
+      dates.map(({ display, iso }) =>
+        fetch(API + '/slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: iso, type, container }),
+        }).then(r => r.json()).then(d => ({ date: display, iso, slots: d.slots || [], error: d.error }))
+      )
+    );
 
-    state.slots = data.slots || [];
-    document.getElementById('slotsDate').textContent = date + ' / ' + type;
-
-    if (state.slots.length === 0) {
-      grid.innerHTML = '<div class="empty">No slots available for this date</div>';
-      return;
-    }
-
-    grid.innerHTML = state.slots.map(s => `
-      <div class="slot" onclick="selectSlot(this, '${s.time}')">
-        ${s.time}
-      </div>
-    `).join('');
+    containerDiv.innerHTML = results.map(({ date, slots, error }) => {
+      if (error) return `<div class="empty" style="color:#e74c3c">${date}: ${error}</div>`;
+      return `
+        <div style="margin-bottom:1.5rem">
+          <div style="font-weight:600;font-size:0.85rem;color:#555;margin-bottom:0.5rem">${date}</div>
+          <div class="grid">${slots.length === 0 ? '<div class="empty" style="padding:1rem">No slots</div>' : slots.map(s => `
+            <div class="slot" onclick="selectSlot(this, '${s.time}', '${date}', '${type}')">${s.time}</div>
+          `).join('')}</div>
+        </div>
+      `;
+    }).join('');
 
   } catch (e) {
-    grid.innerHTML = '<div class="empty" style="color:#e74c3c">Error: ' + e.message + '</div>';
+    containerDiv.innerHTML = `<div class="empty" style="color:#e74c3c">Error: ${e.message}</div>`;
   }
 }
 
-function selectSlot(el, time) {
+function selectSlot(el, time, date, type) {
   document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
   el.classList.add('selected');
   state.selectedSlot = time;
-  document.getElementById('createSlot').value = time;
-  document.getElementById('createDate').value = document.getElementById('slotDate').value;
-  document.getElementById('createType').value = document.getElementById('slotType').value;
-  showTab('create');
+  if (rescheduleApptId) {
+    if (confirm(`Reschedule appointment ${rescheduleApptId} to ${date} at ${time}?`)) {
+      confirmReschedule(time, date, type);
+    }
+  }
 }
 
 // ─── Empty Availability ────────────────────────────────────────────────────────
@@ -430,7 +454,7 @@ async function loadAppointments() {
       <table>
         <thead><tr>
           <th>Appt #</th><th>Date</th><th>Slot</th><th>Container</th>
-          <th>Type</th><th>Status</th><th>Driver</th><th>Truck</th><th></th>
+          <th>Move Type</th><th>Type</th><th>Status</th><th>Driver</th><th>Truck</th><th></th>
         </tr></thead>
         <tbody>
           ${state.appointments.map(a => `
@@ -439,11 +463,13 @@ async function loadAppointments() {
               <td>${a.gateAppt_Dt || '—'}</td>
               <td>${a.gateApptStart_Tm || '—'}</td>
               <td>${a.container_Num || '—'}</td>
+              <td>${typeLabel(a.apptType_Cd)}</td>
               <td>${a.apptType_Cd || '—'}</td>
               <td><span class="status-chip status-${a.apptStatus_Cd || ''}">${statusLabel(a.apptStatus_Cd)}</span></td>
               <td>${a.driverId_Num || '—'}</td>
               <td>${a.truckPlate_Nbr || '—'}</td>
               <td>
+                ${RESCHEDULABLE.includes(a.apptStatus_Cd) ? `<button class="btn btn-outline" style="padding:0.25rem 0.6rem; font-size:0.75rem;" onclick="rescheduleAppointment(${a.gateAppt_Id})">Reschedule</button>` : ''}
                 ${CANCELLABLE.includes(a.apptStatus_Cd) ? `<button class="btn btn-danger" style="padding:0.25rem 0.6rem; font-size:0.75rem;" onclick="cancelAppointment(${a.gateAppt_Id})">Cancel</button>` : ''}
               </td>
             </tr>
@@ -470,6 +496,164 @@ async function cancelAppointment(id) {
     if (data.error) throw new Error(data.error);
     const msgs = (data.messages || []).map(m => m.desc).join('; ');
     showToast(msgs || 'Cancelled');
+    loadAppointments();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ─── Create Appointment ────────────────────────────────────────────────────────
+
+function showCreateAppointment() {
+  document.getElementById('createAppointmentForm').style.display = 'block';
+  document.getElementById('createSlotsResults').innerHTML = '';
+  document.getElementById('createContainer').value = '';
+  document.getElementById('createMoveType').value = 'IP';
+}
+
+function hideCreateAppointment() {
+  document.getElementById('createAppointmentForm').style.display = 'none';
+  document.getElementById('createSlotsResults').innerHTML = '';
+}
+
+async function loadCreateSlots() {
+  const type = document.getElementById('createMoveType').value;
+  const container = document.getElementById('createContainer').value.trim();
+  if (!container) return showToast('Container number is required', 'error');
+  const resultsDiv = document.getElementById('createSlotsResults');
+  resultsDiv.innerHTML = '<div class="loading">Finding available slots</div>';
+
+  const dates = getDatesAhead(4);
+  try {
+    const results = await Promise.all(
+      dates.map(({ display, iso }) =>
+        fetch(API + '/slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: iso, type, container }),
+        }).then(r => r.json()).then(d => ({ date: display, iso, slots: d.slots || [], error: d.error }))
+      )
+    );
+
+    resultsDiv.innerHTML = results.map(({ date, iso, slots, error }) => {
+      if (error) return `<div class="empty" style="color:#e74c3c">${date}: ${error}</div>`;
+      return `
+        <div style="margin-bottom:1.5rem">
+          <div style="font-weight:600;font-size:0.85rem;color:#555;margin-bottom:0.5rem">${date}</div>
+          <div class="grid">${slots.length === 0 ? '<div class="empty" style="padding:0.5rem">No slots</div>' : slots.map(s => `
+            <div class="slot" onclick="selectCreateSlot(this, '${s.time}', '${date}', '${iso}', '${type}', ${s.available})">${s.time}${s.available !== undefined ? ' <span style="color:#27ae60">(' + s.available + ' avail)</span>' : ''}</div>
+          `).join('')}</div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (e) {
+    resultsDiv.innerHTML = `<div class="empty" style="color:#e74c3c">Error: ${e.message}</div>`;
+  }
+}
+
+function selectCreateSlot(el, time, date, iso, type, available) {
+  document.querySelectorAll('#createSlotsResults .slot').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  const container = document.getElementById('createContainer').value.trim();
+  if (confirm(`Create appointment for ${container} on ${date} at ${time}?`)) {
+    document.getElementById('createSlot').value = time;
+    document.getElementById('createDate').value = iso;
+    document.getElementById('createType').value = type;
+    document.getElementById('createContainer').value = container;
+    createAppointment();
+  }
+}
+
+// ─── Reschedule ────────────────────────────────────────────────────────────────
+
+let rescheduleApptId = null;
+
+async function rescheduleAppointment(id) {
+  rescheduleApptId = id;
+  const appt = state.appointments.find(a => a.gateAppt_Id === id);
+  if (!appt) return showToast('Appointment not found', 'error');
+
+  document.getElementById('rescheduleForm').style.display = 'block';
+  document.getElementById('rescheduleSlotsResults').innerHTML = '';
+  document.getElementById('apptsCard').scrollIntoView({ behavior: 'smooth' });
+  loadRescheduleSlots();
+}
+
+async function loadRescheduleSlots() {
+  if (!rescheduleApptId) return;
+  const appt = state.appointments.find(a => a.gateAppt_Id === rescheduleApptId);
+  if (!appt) return showToast('Appointment not found', 'error');
+  const type = appt.apptType_Cd || 'IP';
+  const container = appt.container_Num || '';
+  if (!container) return showToast('Container number is required', 'error');
+  const resultsDiv = document.getElementById('rescheduleSlotsResults');
+  resultsDiv.innerHTML = '<div class="loading">Finding available slots</div>';
+
+  const dates = getDatesAhead(4);
+  try {
+    const results = await Promise.all(
+      dates.map(({ display, iso }) =>
+        fetch(API + '/slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: iso, type, container }),
+        }).then(r => r.json()).then(d => ({ date: display, iso, slots: d.slots || [], error: d.error }))
+      )
+    );
+
+    resultsDiv.innerHTML = results.map(({ date, iso, slots, error }) => {
+      if (error) return `<div class="empty" style="color:#e74c3c">${date}: ${error}</div>`;
+      return `
+        <div style="margin-bottom:1.5rem">
+          <div style="font-weight:600;font-size:0.85rem;color:#555;margin-bottom:0.5rem">${date}</div>
+          <div class="grid">${slots.length === 0 ? '<div class="empty" style="padding:0.5rem">No slots</div>' : slots.map(s => `
+            <div class="slot" onclick="selectRescheduleSlot(this, '${s.time}', '${date}', '${iso}', '${type}', ${s.available})">${s.time}${s.available !== undefined ? ' <span style="color:#27ae60">(' + s.available + ' avail)</span>' : ''}</div>
+          `).join('')}</div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (e) {
+    resultsDiv.innerHTML = `<div class="empty" style="color:#e74c3c">Error: ${e.message}</div>`;
+  }
+}
+
+function selectRescheduleSlot(el, time, date, iso, type, available) {
+  document.querySelectorAll('#rescheduleSlotsResults .slot').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  if (confirm(`Reschedule to ${date} at ${time}?`)) {
+    confirmReschedule(time, iso, type);
+  }
+}
+
+function cancelReschedule() {
+  rescheduleApptId = null;
+  document.getElementById('rescheduleForm').style.display = 'none';
+  document.getElementById('rescheduleSlotsResults').innerHTML = '';
+}
+
+async function confirmReschedule(slot, date, type) {
+  if (!rescheduleApptId) return showToast('No appointment selected', 'error');
+  const timeMatch = slot.match(/^(\d{2}:\d{2})/);
+  if (!timeMatch) return showToast('Invalid slot format: ' + slot, 'error');
+  const time = timeMatch[1];
+  try {
+    const res = await fetch(API + '/manage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gateAppt_Id: rescheduleApptId,
+        gateApptStart_Tm: time,
+        gateAppt_Dt: date,
+        apptType_Cd: type,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const msgs = (data.messages || []).map(m => m.desc).join('; ');
+    showToast(msgs || 'Rescheduled successfully');
+    rescheduleApptId = null;
     loadAppointments();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -534,10 +718,9 @@ function showTab(tab) {
 }
 
 window.onload = () => {
-  document.getElementById('slotsCard').style.display = 'block';
   document.getElementById('containerCard').style.display = 'block';
   document.getElementById('apptsCard').style.display = 'block';
-  loadAppointments();
+  connect();
 };
 </script>
 <script src="/sidebar.js"></script>

@@ -5,6 +5,7 @@ Uses only stdlib + requests (no Flask needed)
 """
 
 import json
+import os
 import re
 import urllib.parse
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -102,6 +103,7 @@ def handle_slots(body):
     container = body.get("container", "")
     fr, jwt, _ = get_auth_tokens()
 
+    # Get container-specific time slots from GetAvailableTimeSlots
     resp = requests.post(
         f"https://{TERMPOINT_HOST}/termpoint-tms/api/MyAppointment/GetAvailableTimeSlots",
         headers=_tms_headers(fr, jwt),
@@ -123,8 +125,37 @@ def handle_slots(body):
     resp.raise_for_status()
     data = resp.json()
     available_slots = data.get("responseBody", {}).get("ResponseData", {}).get("AvailableSlots", [])
+
+    # For MD/MP: also call GetEmptyAppointmentAvailability to get per-slot counts
+    counts_by_time = {}
+    if appt_type in ("MD", "MP"):
+        try:
+            empty_resp = requests.post(
+                f"https://{TERMPOINT_HOST}/termpoint-tms/api/MyAppointment/GetEmptyAppointmentAvailability",
+                headers=_tms_headers(fr, jwt),
+                json={"gateAppt_Dt": date, "apptType_Cd": appt_type},
+                timeout=15,
+            )
+            empty_data = empty_resp.json()
+            empty_list = empty_data.get("responseBody", {}).get("ResponseData", [])
+            if isinstance(empty_data.get("responseBody", {}).get("ResponseData"), dict):
+                empty_list = empty_data.get("responseBody", {}).get("ResponseData", {}).get("RG_EmptyApptAvailability", [])
+            for s in empty_list:
+                counts_by_time[s.get("Slot_Tm", "")] = s.get("TotalNbrOfAvailableSlots")
+        except Exception:
+            pass  # fallback to no counts if this fails
+
+    slots = []
+    for s in available_slots:
+        slot_time = s.get("Slot_Tm", "")
+        slots.append({
+            "time": slot_time,
+            "id": s.get("SlotSchedule_Id", ""),
+            "available": counts_by_time.get(slot_time),
+        })
+
     return {
-        "slots": [{"time": s.get("Slot_Tm", ""), "id": s.get("SlotSchedule_Id", "")} for s in available_slots],
+        "slots": slots,
         "terminal": data.get("responseBody", {}).get("TerminalInfo", {}).get("MTO_Nm", ""),
     }
 
@@ -233,10 +264,15 @@ def handle_manage(body):
     fr, jwt, _ = get_auth_tokens()
 
     payload = {"gateAppt_Id": int(gate_id)}
-    # Optional update fields
-    for field in ["driverId_Num", "truckPlate_Nbr", "gateApptStart_Tm", "gateAppt_Dt", "driverOwnChs_Flg", "apptType_Cd"]:
+    for field in ["driverId_Num", "truckPlate_Nbr", "driverOwnChs_Flg", "apptType_Cd"]:
         if body.get(field):
             payload[field] = body[field]
+    if body.get("gateApptStart_Tm"):
+        payload["gateApptStart_Tm"] = body["gateApptStart_Tm"]
+    if body.get("gateAppt_Dt"):
+        payload["gateAppt_Dt"] = body["gateAppt_Dt"] + "T00:00:00"
+
+    print(f"[MANAGE] gate_id={gate_id} payload={payload}")
 
     resp = requests.post(
         f"https://{TERMPOINT_HOST}/termpoint-tms/api/MyAppointment/PostManageAppointment",
@@ -246,6 +282,7 @@ def handle_manage(body):
     )
     resp.raise_for_status()
     data = resp.json()
+    print(f"[MANAGE] response={data}")
     appts_raw = data.get("responseBody", {}).get("ResponseData", {}).get("TruckVisitAppointment", [])
     appts = _flatten_appointments(appts_raw)
     msgs = data.get("responseBody", {}).get("UserMessages", [])
@@ -297,8 +334,10 @@ def handle_empty_availability(body):
     )
     resp.raise_for_status()
     data = resp.json()
-    slots = data.get("responseBody", {}).get("ResponseData", {}).get("RG_EmptyApptAvailability", [])
     msgs = data.get("responseBody", {}).get("UserMessages", [])
+    resp_data = data.get("responseBody", {}).get("ResponseData")
+    print(f"[EMPTY] ResponseData type: {type(resp_data)} value: {resp_data}")
+    slots = resp_data if isinstance(resp_data, list) else (resp_data.get("RG_EmptyApptAvailability", []) if resp_data else [])
     return {
         "slots": [{
             "id": s.get("ApptSlotSchedule_Id"),
@@ -342,18 +381,33 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/" or self.path == "/termpoint_web.html" or self.path == "/termpoint.html":
             self.path = "/termpoint_web.html"
-        try:
-            with open(f".{self.path}", "rb") as f:
-                body = f.read()
-            ext = self.path.split(".")[-1]
-            ctype = {"html": "text/html", "css": "text/css", "js": "application/javascript"}.get(ext, "text/plain")
-            self.send_response(200)
-            self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", len(body))
-            self.end_headers()
-            self.wfile.write(body)
-        except FileNotFoundError:
+        path = urllib.parse.urlparse(self.path).path
+
+        # Search in multiple static directories
+        search_dirs = [
+            os.path.dirname(__file__),  # /data/projects/tms/api/apm/
+            "/data/projects/tms/ui",
+            "/data/projects/tms/api/apm",
+        ]
+        body = None
+        for base in search_dirs:
+            candidate = os.path.join(base, path.lstrip("/"))
+            if os.path.isfile(candidate):
+                with open(candidate, "rb") as f:
+                    body = f.read()
+                break
+
+        if body is None:
             self.send_error(404, "File not found")
+            return
+
+        ext = path.split(".")[-1]
+        ctype = {"html": "text/html", "css": "text/css", "js": "application/javascript"}.get(ext, "text/plain")
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", len(body))
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_POST(self):
         content_len = int(self.headers.get("Content-Length", 0))

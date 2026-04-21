@@ -5,6 +5,7 @@ Two-step auth: Maersk OAuth → Termpoint JWT
 
 import os
 import time
+import json
 from typing import Optional
 from dataclasses import dataclass
 import httpx
@@ -52,6 +53,7 @@ class APMClient:
     APIGEE_KEY = os.getenv("APIGEE_CONSUMER_KEY", "6hDTGeEAQIdlXMlpghyb4ETgUU7tp56m")
     APIGEE_SECRET = os.getenv("APIGEE_CONSUMER_SECRET", "nrhk7tD18u4fTEDw")
     FORGEROCK_TOKEN = os.getenv("FORGEROCK_TOKEN", "")  # Optional: provide pre-obtained ForgeRock token directly
+    TERMPOINT_AUTH_KEY = os.getenv("TERMPOINT_AUTH_KEY", "")  # Required for AuthenticateUser
 
     def __init__(self):
         self._forgerock_token: Optional[str] = None
@@ -119,7 +121,7 @@ class APMClient:
         if forgerock:
             headers["Authorization"] = f"Bearer {forgerock}"
 
-        payload = {"authenticationKey": None}
+        payload = {"authenticationKey": self.TERMPOINT_AUTH_KEY or None}
 
         with httpx.Client(timeout=30) as client:
             response = client.post(url, json=payload, headers=headers)
@@ -132,8 +134,11 @@ class APMClient:
         try:
             token = json_data["res"]["getBody"]["ResponseData"]["AccessToken"]
         except (KeyError, TypeError):
-            # Try flat structure
-            token = json_data.get("res", {}).get("AccessToken", "")
+            # Try responseBody structure (Termpoint staging)
+            token = json_data.get("responseBody", {}).get("ResponseData", {}).get("AccessToken", "")
+            if not token:
+                # Try flat structure
+                token = json_data.get("res", {}).get("AccessToken", "")
             if not token:
                 raise APMApiError(f"Could not parse Termpoint JWT from: {json_data}")
 
@@ -166,7 +171,14 @@ class APMClient:
         if response.status_code >= 400:
             raise APMApiError(f"API error {response.status_code}: {response.text}")
 
-        return response.json() if response.text else {}
+        if not response.text:
+            return {}
+
+        # API returns double-encoded JSON (a JSON string containing JSON)
+        parsed = response.json()
+        if isinstance(parsed, str):
+            parsed = json.loads(parsed)
+        return parsed
 
     # ─── Appointments ───────────────────────────────────────────
 
@@ -194,7 +206,10 @@ class APMClient:
         }
         data = self._request("POST", "/MyAppointment/GetAvailableTimeSlots", json=payload)
         slots = []
-        items = data.get("res", {}).get("getBody", {}).get("ResponseData", [])
+        # Try staging structure: responseBody.ResponseData.AvailableSlots
+        items = data.get("responseBody", {}).get("ResponseData", {}).get("AvailableSlots", [])
+        if not isinstance(items, list):
+            items = []
         for item in items:
             slots.append(APMSlot(
                 terminal=terminal,
@@ -223,10 +238,14 @@ class APMClient:
             "apptStatus_Cd": "",
             "cargoRef_Num": "",
             "container_Num": "",
+            "con_Cd": terminal,  # terminal code
         }
         data = self._request("POST", "/MyAppointment/GetTruckerAppointments", json=payload)
         appointments = []
-        items = data.get("res", {}).get("getBody", {}).get("ResponseData", [])
+        # Try staging structure: responseBody.ResponseData.TruckVisitAppointment
+        items = data.get("responseBody", {}).get("ResponseData", {}).get("TruckVisitAppointment", [])
+        if not isinstance(items, list):
+            items = []
         for item in items:
             appointments.append(self._parse_appointment(item, terminal))
         return appointments
@@ -235,7 +254,7 @@ class APMClient:
         """Get specific appointment details."""
         data = self._request("POST", "/MyAppointment/GetGateAppointmentDetails",
                              json={"gateAppt_Id": appointment_id})
-        item = data.get("res", {}).get("getBody", {}).get("ResponseData", {})
+        item = data.get("responseBody", {}).get("ResponseData", {})
         return self._parse_appointment(item, terminal)
 
     def create_appointment(
@@ -279,7 +298,7 @@ class APMClient:
             "position_On_Truck": 0,
         }]
         data = self._request("POST", "/MyAppointment/PostCreateAppointment", json=payload)
-        item = data.get("res", {}).get("getBody", {}).get("ResponseData", {})
+        item = data.get("responseBody", {}).get("ResponseData", {})
         return self._parse_appointment(item, terminal)
 
     def cancel_appointment(self, terminal: str, appointment_id: str) -> bool:
