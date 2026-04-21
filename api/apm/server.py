@@ -371,17 +371,28 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def do_OPTIONS(self):
-        self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.end_headers()
-
     def do_GET(self):
         if self.path == "/" or self.path == "/termpoint_web.html" or self.path == "/termpoint.html":
             self.path = "/termpoint_web.html"
         path = urllib.parse.urlparse(self.path).path
+
+        # Serve favicon as 1x1 transparent gif to prevent browser hanging on missing favicon
+        if path == "/favicon.ico":
+            favicon_path = os.path.join("/data/projects/tms/ui", "favicon.ico")
+            if os.path.isfile(favicon_path):
+                with open(favicon_path, "rb") as f:
+                    favicon = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/x-icon")
+                self.send_header("Content-Length", len(favicon))
+                self.send_header("Connection", "close")
+                self.end_headers()
+                self.wfile.write(favicon)
+                self.wfile.flush()
+                return
+            else:
+                self.send_error(404, "favicon not found")
+                return
 
         # Search in multiple static directories
         search_dirs = [
@@ -408,6 +419,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", len(body))
         self.end_headers()
         self.wfile.write(body)
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
 
     def do_POST(self):
         content_len = int(self.headers.get("Content-Length", 0))
