@@ -307,8 +307,15 @@ def handle_container_availability(body):
     )
     resp.raise_for_status()
     data = resp.json()
-    containers = data.get("responseBody", {}).get("ResponseData", [])
+    raw_containers = data.get("responseBody", {}).get("ResponseData", [])
     msgs = data.get("responseBody", {}).get("UserMessages", [])
+
+    # Map AppointmentReady -> Available_Flg for frontend compatibility
+    containers = []
+    for c in raw_containers:
+        c["Available_Flg"] = "Y" if c.get("AppointmentReady") == "YES" else "N"
+        containers.append(c)
+
     return {
         "containers": containers,
         "messages": [{"no": m.get("MessageNo"), "desc": m.get("MessageDescription"), "severity": m.get("MessageSeverity")} for m in msgs],
