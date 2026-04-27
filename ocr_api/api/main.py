@@ -92,7 +92,7 @@ async def get_document_stats(
     # Get all documents with their fields
     result = supabase.table("ocr_documents").select("id,job_id,status").execute()
 
-    counts = {"review": 0, "failed": 0, "ocr": 0, "verified": 0, "total": len(result.data)}
+    counts = {"review": 0, "failed": 0, "ocr": 0, "completed": 0, "verified": 0, "total": len(result.data)}
     linked = 0
     unlinked = 0
 
@@ -177,24 +177,6 @@ async def get_document_stats(
         field_chassis=field_counts["chassis_number"],
         field_complete=field_complete,
     )
-
-
-class UploadResponse(BaseModel):
-    job_id: str
-    status: DocumentStatus
-    filename: str
-    created_at: datetime
-    page_count: Optional[int] = 1
-    parent_job_id: Optional[str] = None
-
-
-class MultiUploadResponse(BaseModel):
-    """Response for multi-page PDF upload."""
-    job_ids: list[str]
-    page_count: int
-    filename: str
-    created_at: datetime
-    parent_job_id: Optional[str] = None
 
 
 @app.post("/api/v1/upload", response_model=UploadResponse)
@@ -289,7 +271,7 @@ async def upload_document(
 
             # Mark original as parent (completed splitting)
             supabase.table("ocr_documents").update({
-                "status": "ocr",
+                "status": "completed",
                 "page_count": page_count,
             }).eq("job_id", job_id).execute()
 

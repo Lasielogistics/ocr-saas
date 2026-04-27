@@ -8,6 +8,7 @@ import json
 import os
 import re
 import urllib.parse
+import urllib.request
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import requests
 
@@ -401,11 +402,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_error(404, "favicon not found")
                 return
 
-        # Search in multiple static directories
+        # Search in UI static directories
         search_dirs = [
-            os.path.dirname(__file__),  # /data/projects/tms/api/apm/
             "/data/projects/tms/ui",
-            "/data/projects/tms/api/apm",
+            os.path.dirname(__file__),
         ]
         body = None
         for base in search_dirs:
@@ -416,8 +416,30 @@ class Handler(BaseHTTPRequestHandler):
                 break
 
         if body is None:
-            self.send_error(404, "File not found")
-            return
+            # Proxy to nginx (port 3000) for API and other requests
+            try:
+                proxy_req = urllib.request.Request(
+                    f"http://localhost:3000{path}",
+                    headers={k: v for k, v in self.headers.items() if k.lower() not in ("host", "connection")}
+                )
+                proxy_resp = urllib.request.urlopen(proxy_req, timeout=10)
+                raw_body = proxy_resp.read()
+                print(f"[PROXY] read {len(raw_body)} bytes, Content-Length={proxy_resp.headers.get('Content-Length')}", flush=True)
+                body = raw_body
+                # DO NOT send default headers from send_response - write directly
+                self.wfile.write(f"HTTP/1.1 {proxy_resp.status} OK\r\n".encode())
+                for hdr, val in proxy_resp.headers.items():
+                    if hdr.lower() not in ("transfer-encoding", "connection", "server", "date"):
+                        self.wfile.write(f"{hdr}: {val}\r\n".encode())
+                self.wfile.write(b"X-Proxy-Host: termpoint-server\r\n")
+                self.wfile.write(b"Connection: close\r\n")
+                self.wfile.write(b"\r\n")
+                self.wfile.write(body)
+                self.wfile.flush()
+                return
+            except Exception as e:
+                self.send_json({"error": f"Proxy error: {e}", "path": path}, 502)
+                return
 
         ext = path.split(".")[-1]
         ctype = {"html": "text/html", "css": "text/css", "js": "application/javascript"}.get(ext, "text/plain")

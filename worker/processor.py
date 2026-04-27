@@ -145,6 +145,14 @@ class OCRProcessor:
 class OCRProcessorLite:
     """Lightweight processor for testing without Surya OCR."""
 
+    def __init__(self):
+        from preprocessing import ImagePreprocessor
+        from classifier import DocumentClassifier
+        from extractor import FieldExtractor
+        self.preprocessor = ImagePreprocessor()
+        self.classifier = DocumentClassifier()
+        self.extractor = FieldExtractor()
+
     def process(self, job_id: str, file_path: str) -> dict:
         """Process using only Tesseract."""
         from pdf2image import convert_from_path

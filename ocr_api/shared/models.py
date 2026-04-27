@@ -10,8 +10,10 @@ class DocumentStatus(str, Enum):
     QUEUED = "queued"
     PROCESSING = "processing"
     COMPLETED = "completed"
+    OCR = "ocr"  # OCR'd documents (migrated from 'completed')
     FAILED = "failed"
     REVIEW = "review"
+    VERIFIED = "verified"  # Manually verified by user
 
 
 class DocumentType(str, Enum):

@@ -18,6 +18,17 @@ class UploadResponse(BaseModel):
     status: DocumentStatus
     filename: str
     created_at: datetime
+    page_count: Optional[int] = 1
+    parent_job_id: Optional[str] = None
+
+
+class MultiUploadResponse(BaseModel):
+    """Response for multi-page PDF upload."""
+    job_ids: list[str]
+    page_count: int
+    filename: str
+    created_at: datetime
+    parent_job_id: Optional[str] = None
 
 
 class StatusResponse(BaseModel):

@@ -2,6 +2,7 @@
 import logging
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -71,12 +72,12 @@ def process_document(self, job_id: str, customer_id: str, file_path: str) -> dic
 
         # Update with results
         update_data = {
-            "status": "ocr",
+            "status": "completed",
             "document_type": result["document_type"],
             "ocr_text": result["ocr_text"],
             "page_count": result["page_count"],
             "confidence_score": result["confidence_score"],
-            "processed_at": "now()",
+            "processed_at": datetime.utcnow().isoformat(),
         }
         supabase.table("ocr_documents").update(update_data).eq("job_id", job_id).execute()
 
@@ -141,9 +142,12 @@ def call_webhook(webhook_url: str, result: dict) -> None:
 
 
 def init_customer_clients():
-    """Initialize customer clients from config file."""
+    """Initialize customer clients from config file.
+
+    Tries multiple paths for the customers.json config file,
+    then delegates to the shared factory method.
+    """
     from shared.supabase_client import SupabaseClientFactory
-    import json
     from pathlib import Path
 
     # Try multiple paths for the config file

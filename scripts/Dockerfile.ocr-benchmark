@@ -1,0 +1,42 @@
+FROM python:3.11-slim-bookworm
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    poppler-utils \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libgomp1 \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    libpq-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python OCR libraries
+RUN pip install --no-cache-dir \
+    surya-ocr>=0.4.0 \
+    easyocr>=1.7.0 \
+    python-doctr>=0.8.0 \
+    paddleocr>=2.8.0 \
+    pdf2image>=1.17.0 \
+    Pillow>=10.0.0 \
+    opencv-python-headless>=4.10.0 \
+    numpy>=1.24.0 \
+    pytesseract>=0.3.10 \
+    httpx>=0.28.0 \
+    pydantic>=2.10.0
+
+# Install Mistral SDK (optional - for Mistral OCR)
+RUN pip install --no-cache-dir mistralai>=0.0.8
+
+# Copy benchmark script
+COPY ocr_benchmark.py .
+
+# Default command
+CMD ["python", "ocr_benchmark.py", "--help"]

@@ -9,10 +9,11 @@ class DocumentStatus(str, Enum):
     PENDING = "pending"
     QUEUED = "queued"
     PROCESSING = "processing"
-    OCR = "ocr"
-    VERIFIED = "verified"
+    COMPLETED = "completed"
+    OCR = "ocr"  # OCR'd documents (awaiting review)
     FAILED = "failed"
     REVIEW = "review"
+    VERIFIED = "verified"
 
 
 class DocumentType(str, Enum):
@@ -67,6 +68,8 @@ class UploadResponse(BaseModel):
     status: DocumentStatus
     filename: str
     created_at: datetime
+    page_count: Optional[int] = 1
+    parent_job_id: Optional[str] = None
 
 
 class StatusResponse(BaseModel):

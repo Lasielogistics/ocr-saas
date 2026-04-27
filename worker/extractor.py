@@ -111,7 +111,7 @@ class FieldExtractor:
                         "confidence": 0.85,
                         "page": page_num,
                     })
-                break  # Only take first match of each pattern
+                    break  # Found a valid date for this pattern; stop checking more matches for this pattern
 
         return dates
 

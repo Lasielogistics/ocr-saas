@@ -388,4 +388,63 @@ Response:
 3. **Test with 5 real logistics documents** (EIRs, PODs, Bills)
 
 ### Plan File
-Full plan saved at: `/home/talha/.claude/plans/cuddly-exploring-cerf.md
+Full plan saved at: `/home/talha/.claude/plans/cuddly-exploring-cerf.md`
+
+---
+
+## Health Check (2026-04-26)
+
+### Services Status
+- tms-api: Running (port 9001) ✓
+- tms-ocr-api: Running (port 9010) ✓
+- tms-ocr-worker: Running ✓ (reconnected after fixing Redis perms)
+- tms-redis: Running (port 6379) ✓ Fixed perms on /data/docker/volumes/docker_redis_data/_data
+- tms-postgres: Running (port 5432) ✓
+- tms-postgrest: Running (port 5433) ✓
+- tms-ui: Running (port 3000) ✓
+- tms-playwright: Running (ports 5900/6080/9222) ✓
+
+### Redis Fix
+- **Problem**: Redis couldn't write RDB snapshots - "Failed opening the temp RDB file... Permission denied"
+- **Root Cause**: /data/docker/volumes/docker_redis_data/_data owned by root, Redis inside container runs as uid 1000
+- **Fix**: `sudo chown -R 1000:1000 /data/docker/volumes/docker_redis_data/_data`
+
+### NPU Issue - COLD BOOT REQUIRED
+- **Problem**: amdxdna driver SVA bind failing with EOPNOTSUPP (-95)
+- **Symptom**: `xrt-smi examine` fails with "Open /dev/accel/accel0 failed (err=-95)"
+- **Symptom**: FastFlowLM fails with "Open /dev/accel/accel0 failed (err=-95)"
+- **dmesg errors**: `amdxdna 0000:c7:00.1: [drm] *ERROR* amdxdna_drm_open: SVA bind device failed, ret -95`
+- **Status**: Driver loads, firmware loads, /dev/accel/accel0 exists with correct permissions
+- **Installed**: FastFlowLM v0.9.37 (reinstalled from .deb)
+- **User**: talha added to 'render' group
+- **Memlock**: Current 8MB, needs unlimited (was blocked, need to edit /etc/security/limits.conf)
+- **Reboot**: Scheduled for cold boot to reset PCIe/NPU state
+
+### Research Findings (2026-04-26)
+
+**Known causes of SVA bind failure:**
+1. `amd_iommu=off` in kernel cmdline - FIX: Remove it
+   - Found via FastFlowLM issue #403 - this was the cause for CachyOS users
+   - But our kernel cmdline does NOT have `amd_iommu=off`
+2. PCIe SVA state not initialized - FIX: Cold boot (AC power cycle)
+3. Kernel upgrade causing regression - Need to check if kernel was upgraded
+
+**Key URLs:**
+- FastFlowLM: https://github.com/FastFlowLM/FastFlowLM
+- Linux docs: https://github.com/FastFlowLM/FastFlowLM/blob/main/docs/linux-getting-started.md
+- AMD XDNA driver: https://github.com/amd/xdna-driver
+- Lemonade PPA: https://launchpad.net/~lemonade-team/+archive/ubuntu/stable
+
+**FastFlowLM Requirements:**
+- Ubuntu 24.04 or 25.10 (we have 25.10 ✓)
+- Kernel 7.0+ with amdxdna driver (we have 6.17, need to verify driver)
+- NPU firmware >= 1.1.0.0 (we have 1.1.2.64 ✓)
+- Memlock unlimited (we have 8MB ✗)
+- amd_iommu enabled (IOMMU groups exist ✓)
+
+**Linux Getting Started Steps (from official docs):**
+1. Add AMD XRT PPA: `sudo add-apt-repository ppa:lemonade-team/stable`
+2. Install: `sudo apt install libxrt-npu2 amdxdna-dkms`
+3. Reboot
+4. Install FastFlowLM: `sudo apt install ./fastflowlm*.deb`
+5. Check memlock: `ulimit -l` - if not unlimited, edit /etc/security/limits.conf
