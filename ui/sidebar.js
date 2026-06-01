@@ -93,6 +93,7 @@ function getCurrentPageName() {
     'calendar': 'calendar',
     'dispatch.backup': 'containers',
     'index': 'dashboard',
+    'server_metrics': 'server_metrics',
     '': 'dashboard'
   };
 

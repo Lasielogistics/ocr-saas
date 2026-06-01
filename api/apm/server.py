@@ -416,10 +416,10 @@ class Handler(BaseHTTPRequestHandler):
                 break
 
         if body is None:
-            # Proxy to nginx (port 3000) for API and other requests
+            # Proxy to nginx (port 80) for API and other requests
             try:
                 proxy_req = urllib.request.Request(
-                    f"http://localhost:3000{path}",
+                    f"http://localhost:80{path}",
                     headers={k: v for k, v in self.headers.items() if k.lower() not in ("host", "connection")}
                 )
                 proxy_resp = urllib.request.urlopen(proxy_req, timeout=10)
@@ -503,5 +503,5 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     print("=== TERMPoint TMS Web Server ===")
     print("Open: http://localhost:8000")
-    server = HTTPServer(("0.0.0.0", 8000), Handler)
+    server = HTTPServer(("0.0.0.0", 8040), Handler)
     server.serve_forever()

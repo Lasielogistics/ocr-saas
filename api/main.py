@@ -12,6 +12,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from supabase import create_client
 
+from invoices_api.auth import router as auth_router
+from invoices_api.invoices import router as invoices_router
+
 BASE_DIR = Path(__file__).resolve().parents[1]
 CHAT_DIR = Path(os.getenv("CHAT_DIR", "/chat"))
 CHAT_DIR.mkdir(parents=True, exist_ok=True)
@@ -27,6 +30,9 @@ app.add_middleware(
     allow_methods=["POST", "OPTIONS", "GET", "PUT", "DELETE"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)
+app.include_router(invoices_router)
 
 # Supabase setup from environment
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://bsaffwfvnnyaihmrmqwt.supabase.co")
@@ -169,6 +175,272 @@ async def call_lemonade_with_context(
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/metrics")
+async def get_metrics():
+    """Live server metrics for the TMS dashboard."""
+    import re
+    import datetime
+
+    def kb_to_gb(kb):
+        return round(int(kb) * 1024 / 1073741824, 1)
+
+    # CPU from /proc/stat
+    def get_cpu_pct():
+        try:
+            with open('/host/proc/stat') as f:
+                line = f.readline()
+            fields = line.split()
+            # user nice idle
+            user = int(fields[1])
+            nice = int(fields[2])
+            system = int(fields[3])
+            idle = int(fields[4])
+            iowait = int(fields[5])
+            irq = int(fields[6])
+            softirq = int(fields[7])
+            total = user + nice + system + idle + iowait + irq + softirq
+            active = total - idle - iowait
+            if not hasattr(get_cpu_pct, '_prev'):
+                get_cpu_pct._prev = (total, active)
+                return 0.0
+            prev_total, prev_active = get_cpu_pct._prev
+            get_cpu_pct._prev = (total, active)
+            if total - prev_total == 0:
+                return 0.0
+            return round(100.0 * (active - prev_active) / (total - prev_total), 1)
+        except:
+            return 0.0
+
+    cpu_pct = get_cpu_pct()
+
+    # CPU model + cores
+    try:
+        with open('/host/proc/cpuinfo') as f:
+            cpuinfo = f.read()
+        model_match = re.search(r'model name\s+:\s+(.+)', cpuinfo)
+        cpu_model = model_match.group(1).split('@')[0].strip() if model_match else 'N/A'
+        cores = len(re.findall(r'processor\s+:', cpuinfo))
+    except:
+        cpu_model = 'N/A'
+        cores = 0
+
+    # Mem
+    with open('/host/proc/meminfo') as f:
+        mem = f.read()
+    m = dict(re.findall(r'(\w+):\s+(\d+)', mem))
+    mem_total = int(m.get('MemTotal', 0)) // 1024
+    mem_avail = int(m.get('MemAvailable', 0)) // 1024
+    mem_used = mem_total - mem_avail
+
+    # Load avg
+    with open('/host/proc/loadavg') as f:
+        load = f.read().split()[:3]
+    loadavg = [float(x) for x in load]
+
+    # Uptime
+    with open('/host/proc/uptime') as f:
+        uptime_s = float(f.read().split()[0])
+    days = int(uptime_s // 86400)
+    hours = int((uptime_s % 86400) // 3600)
+    mins = int((uptime_s % 3600) // 60)
+    boot_time = datetime.datetime.now() - datetime.timedelta(seconds=int(uptime_s))
+    since = boot_time.strftime('%Y-%m-%d %H:%M')
+
+    # containerd + dockerd CPU% (from /proc)
+    def get_proc_cpu_pct(name):
+        try:
+            for proc_dir in ['/usr/bin/containerd', '/usr/sbin/dockerd', '/usr/bin/containerd-shim-runc-v2']:
+                # find PIDs
+                import glob
+                for piddir in glob.glob(f'/proc/[0-9]*/'):
+                    try:
+                        with open(piddir + 'cmdline', 'rb') as f:
+                            cmd = f.read().decode('utf-8', errors='ignore').replace('\x00', ' ')
+                        if name in cmd:
+                            pid = piddir.split('/')[-2]
+                            with open(f'/proc/{pid}/stat') as f:
+                                st = f.read().split()
+                            utime = int(st[13])
+                            stime = int(st[14])
+                            starttime = int(st[21])
+                            with open('/proc/uptime') as f:
+                                uptime = float(f.read().split()[0])
+                            with open('/proc/stat') as f:
+                                sys_cpu = f.readline()
+                            sys_fields = sys_cpu.split()
+                            sys_total = sum(int(x) for x in sys_fields[1:])
+                            sys_idle = int(sys_fields[4])
+                            # simple rate
+                            return round((utime + stime) / (uptime * 100), 1)
+                    except:
+                        continue
+            return 0.0
+        except:
+            return 0.0
+
+    # simpler approach: run ps via subprocess but fall back gracefully
+    def ps_pct(cmdline_contains):
+        try:
+            import subprocess
+            out = subprocess.check_output(
+                f"ps aux | grep '{cmdline_contains}' | grep -v grep | awk '{{print $3}}'",
+                shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5
+            ).strip()
+            if out:
+                return float(out.split('\n')[0])
+        except:
+            pass
+        return 0.0
+
+    def ps_etime(cmdline_contains):
+        try:
+            import subprocess
+            out = subprocess.check_output(
+                f"ps aux | grep '{cmdline_contains}' | grep -v grep | awk '{{print $10}}'",
+                shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5
+            ).strip()
+            return out.split('\n')[0] if out else 'N/A'
+        except:
+            return 'N/A'
+
+    containerd_pct = ps_pct('/usr/bin/containerd')
+    dockerd_pct = ps_pct('/usr/sbin/dockerd')
+    containerd_etime = ps_etime('/usr/bin/containerd')
+    dockerd_etime = ps_etime('/usr/sbin/dockerd')
+
+    # Docker containers via socket
+    containers = []
+    running_count = 0
+    try:
+        import socket, json as _json, re
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        sock.connect('/var/run/docker.sock')
+        req = b'GET /v1.41/containers/json?all=true HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n'
+        sock.sendall(req)
+        resp = b''
+        while True:
+            try:
+                d = sock.recv(4096)
+                if not d:
+                    break
+                resp += d
+            except:
+                break
+        sock.close()
+        body = resp.decode('utf-8', errors='ignore')
+        # Extract JSON body after headers
+        json_str = body.split('\r\n\r\n', 1)[1] if '\r\n\r\n' in body else body
+        json_str = json_str.strip()
+        # Handle chunked transfer encoding
+        te_match = re.search(r'transfer-encoding:\s*chunked', body, re.IGNORECASE)
+        if te_match:
+            chunks = []
+            pos = 0
+            data = json_str
+            while pos < len(data):
+                nl = data.find('\r\n', pos)
+                if nl == -1 or nl == pos:
+                    break
+                size_hex = data[pos:nl].strip()
+                if not size_hex:
+                    break
+                try:
+                    size = int(size_hex, 16)
+                except ValueError:
+                    break
+                if size == 0:
+                    break
+                chunk_start = nl + 2
+                chunk_end = chunk_start + size
+                chunks.append(data[chunk_start:chunk_end])
+                pos = chunk_end
+            json_str = ''.join(chunks)
+        container_list = _json.loads(json_str)
+        for c in container_list:
+                names = c.get('Names', [])
+                name = names[0].lstrip('/') if names else c.get('Id', '')[:12]
+                state = c.get('State', '')
+                status = c.get('Status', '')
+                health = 'healthy' if c.get('Health', {}).get('Status') == 'healthy' else \
+                         'starting' if 'starting' in status.lower() else \
+                         'unhealthy' if state in ('dead', 'exited') else 'running'
+                containers.append({
+                    'name': name,
+                    'status': state if state else 'unknown',
+                    'health': health,
+                    'cpu_pct': 'n/a',
+                    'mem_pct': 'n/a',
+                })
+                if state == 'running':
+                    running_count += 1
+    except Exception as e:
+        containers = []
+
+    total_containers = len(containers)
+
+    # Docker mem total
+    try:
+        import subprocess
+        out = subprocess.check_output('docker info --format "{{.MemTotal}}"',
+                                       shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5)
+        mem_total_docker = round(int(out.strip()) / 1048576, 1)
+    except:
+        mem_total_docker = 0.0
+
+    try:
+        import subprocess
+        out = subprocess.check_output(
+            'docker stats --no-stream --format "{{.MemUsage}}"',
+            shell=True, text=True, stderr=subprocess.DEVNULL, timeout=5
+        )
+        used_mb = 0.0
+        for line in out.strip().split('\n'):
+            m = re.match(r'([0-9.]+)\s*(\w?i?B)', line)
+            if m:
+                val, unit = float(m.group(1)), m.group(2)
+                used_mb += val * 1024 if 'Gi' in unit else val
+        mem_used_docker = round(used_mb, 1)
+    except:
+        mem_used_docker = 0.0
+
+    # Disks
+    disks = []
+    try:
+        import subprocess
+        df = subprocess.check_output(
+            'df -P | grep "^/dev"', shell=True, text=True, stderr=subprocess.DEVNULL
+        ).splitlines()
+        for line in df:
+            parts = line.split()
+            if len(parts) >= 6:
+                total_kb = int(parts[1])
+                used_kb = int(parts[2])
+                mount = parts[-1]
+                disks.append({'mount': mount, 'total': kb_to_gb(total_kb), 'used': kb_to_gb(used_kb)})
+    except:
+        pass
+
+    return {
+        "cpu": {"pct": cpu_pct, "cores": cores, "model": cpu_model},
+        "mem": {"total": kb_to_gb(mem_total), "used": kb_to_gb(mem_used), "avail": kb_to_gb(mem_avail)},
+        "loadavg": loadavg,
+        "uptime": {"days": days, "hours": hours, "mins": mins, "since": since},
+        "docker": {
+            "containerd_pct": round(containerd_pct, 1),
+            "dockerd_pct": round(dockerd_pct, 1),
+            "containerd_etime": containerd_etime,
+            "dockerd_etime": dockerd_etime,
+            "running": running_count,
+            "total": total_containers,
+            "mem_used": mem_used_docker,
+            "mem_total": mem_total_docker,
+        },
+        "containers": containers,
+        "disks": disks,
+    }
 
 
 @app.post("/chat")

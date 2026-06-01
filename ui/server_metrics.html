@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Server Metrics – TMS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="/sidebar.js"></script>
+  <style>
+    :root {
+      --sidebar-width: 220px;
+      --sidebar-collapsed: 60px;
+      --primary-color: #1f6feb;
+      --success-color: #1a7f37;
+      --warning-color: #9a6700;
+      --error-color: #cf222e;
+      --bg-light: #f6f8fa;
+      --text-dark: #0d1117;
+      --text-muted: #57606a;
+      --border-color: #d0d7de;
+      --card-bg: #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #layout { height: 100%; }
+    body { font-family: 'Source Sans 3', sans-serif; background: var(--bg-light); color: var(--text-dark); overflow: hidden; font-size: 14px; }
+    h1, h2, h3, h4 { font-family: 'Poppins', sans-serif; font-weight: 600; }
+
+    .layout { display: flex; height: 100%; transition: margin-left .3s; }
+
+    body.sidebar-open .content {
+      margin-left: var(--sidebar-width); padding: 1.5rem;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      transition: margin-left .3s ease;
+    }
+    body.sidebar-collapsed .content {
+      margin-left: var(--sidebar-collapsed); padding: 1.5rem;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      transition: margin-left .3s ease;
+    }
+
+    .page-header { margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .page-header h1 { font-size: 1.4rem; color: var(--text-dark); }
+    .refresh-badge { font-size: 0.75rem; color: var(--text-muted); background: #eaeef2; padding: 0.25rem 0.6rem; border-radius: 20px; }
+    .refresh-badge.live { color: var(--success-color); background: #dafbe1; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+      overflow-y: auto;
+      padding-bottom: 1rem;
+      flex: 1;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .card-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .card-value { font-size: 1.8rem; font-weight: 700; font-family: 'Poppins', sans-serif; color: var(--text-dark); line-height: 1.1; }
+    .card-value.small { font-size: 1.2rem; }
+    .card-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .card-value.warning { color: var(--warning-color); }
+    .card-value.error { color: var(--error-color); }
+    .card-value.ok { color: var(--success-color); }
+
+    .progress-bar { height: 6px; background: #eaeef2; border-radius: 3px; overflow: hidden; margin-top: 0.4rem; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+    .fill-ok { background: var(--success-color); }
+    .fill-warn { background: var(--warning-color); }
+    .fill-error { background: var(--error-color); }
+    .fill-primary { background: var(--primary-color); }
+
+    .section-title { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 0.5rem 0 0.3rem; grid-column: 1 / -1; display: flex; align-items: center; gap: 0.5rem; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+
+    .container-list { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem; }
+    .container-item { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.7rem 1rem; display: flex; align-items: center; gap: 0.8rem; }
+    .container-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-healthy { background: var(--success-color); box-shadow: 0 0 4px var(--success-color); }
+    .dot-starting { background: var(--warning-color); box-shadow: 0 0 4px var(--warning-color); }
+    .dot-unhealthy { background: var(--error-color); box-shadow: 0 0 4px var(--error-color); }
+    .container-name { font-weight: 600; font-size: 0.85rem; flex: 1; }
+    .container-status { font-size: 0.75rem; color: var(--text-muted); }
+    .container-cpu, .container-mem { font-size: 0.75rem; color: var(--text-muted); min-width: 70px; text-align: right; }
+
+    .disk-section { grid-column: 1 / -1; }
+    .disk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; margin-top: 0.5rem; }
+    .disk-item { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.7rem 1rem; }
+    .disk-name { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+    .disk-bar { height: 5px; background: #eaeef2; border-radius: 3px; overflow: hidden; margin: 0.4rem 0; }
+    .disk-fill { height: 100%; border-radius: 3px; }
+    .disk-used { font-size: 0.75rem; color: var(--text-muted); }
+
+    .uptime-row { grid-column: 1 / -1; display: flex; gap: 1rem; flex-wrap: wrap; }
+    .uptime-chip { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.75rem; color: var(--text-muted); }
+    .uptime-chip span { color: var(--text-dark); font-weight: 600; }
+
+    .error-msg { color: var(--error-color); font-size: 0.9rem; padding: 2rem; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div id="sidebar-container"></div>
+  <div class="content">
+    <div class="page-header">
+      <h1>Server Metrics</h1>
+      <span id="refresh-badge" class="refresh-badge live">Live</span>
+    </div>
+    <div id="metrics-grid" class="metrics-grid">
+      <div class="error-msg" id="error-msg" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let lastUpdate = Date.now();
+
+async function fetchMetrics() {
+  try {
+    const resp = await fetch('/api/metrics');
+    if (!resp.ok) throw new Error('API error ' + resp.status);
+    const d = await resp.json();
+    renderMetrics(d);
+    document.getElementById('refresh-badge').textContent = 'Live';
+    lastUpdate = Date.now();
+  } catch (e) {
+    document.getElementById('error-msg').style.display = 'block';
+    document.getElementById('error-msg').textContent = 'Failed to load metrics: ' + e.message;
+  }
+}
+
+function pct(n, total) { return total > 0 ? Math.round((n / total) * 100) : 0; }
+function fill(pct) {
+  if (pct >= 90) return 'fill-error';
+  if (pct >= 70) return 'fill-warn';
+  return 'fill-ok';
+}
+
+function renderMetrics(d) {
+  const grid = document.getElementById('metrics-grid');
+  let h = '';
+
+  // ---- System ----
+  h += `<div class="section-title">System</div>`;
+
+  h += `<div class="card">`;
+  h += `<div class="card-label">CPU Usage</div>`;
+  h += `<div class="card-value ${d.cpu.pct >= 90 ? 'error' : d.cpu.pct >= 70 ? 'warning' : ''}">${d.cpu.pct}%</div>`;
+  h += `<div class="progress-bar"><div class="progress-fill ${fill(d.cpu.pct)}" style="width:${d.cpu.pct}%"></div></div>`;
+  h += `<div class="card-sub">${d.cpu.cores} cores · ${d.cpu.model}</div>`;
+  h += `</div>`;
+
+  h += `<div class="card">`;
+  h += `<div class="card-label">Memory</div>`;
+  h += `<div class="card-value ${pct(d.mem.used, d.mem.total) >= 90 ? 'error' : pct(d.mem.used, d.mem.total) >= 70 ? 'warning' : ''}">${pct(d.mem.used, d.mem.total)}%</div>`;
+  h += `<div class="progress-bar"><div class="progress-fill ${fill(pct(d.mem.used, d.mem.total))}" style="width:${pct(d.mem.used, d.mem.total)}%"></div></div>`;
+  h += `<div class="card-sub">${fmt(d.mem.used)} / ${fmt(d.mem.total)} · ${fmt(d.mem.avail)} avail</div>`;
+  h += `</div>`;
+
+  h += `<div class="card">`;
+  h += `<div class="card-label">Load Average</div>`;
+  h += `<div class="card-value small">${d.loadavg.map(v => v.toFixed(2)).join(' · ')}</div>`;
+  h += `<div class="card-sub">1m · 5m · 15m</div>`;
+  h += `</div>`;
+
+  h += `<div class="card">`;
+  h += `<div class="card-label">Uptime</div>`;
+  h += `<div class="card-value small">${d.uptime.days}d ${d.uptime.hours}h ${d.uptime.mins}m</div>`;
+  h += `<div class="card-sub">${d.uptime.since}</div>`;
+  h += `</div>`;
+
+  // ---- Docker ----
+  h += `<div class="section-title">Docker</div>`;
+
+  h += `<div class="card">`;
+  h += `<div class="card-label">containerd CPU</div>`;
+  h += `<div class="card-value small ${d.docker.containerd_pct >= 20 ? 'error' : d.docker.containerd_pct >= 10 ? 'warning' : 'ok'}">${d.docker.containerd_pct}%</div>`;
+  h += `<div class="card-sub">${d.docker.containerd_etime}</div>`;
+  h += `</div>`;
+
+  h += `<div class="card">`;
+  h += `<div class="card-label">dockerd CPU</div>`;
+  h += `<div class="card-value small ${d.docker.dockerd_pct >= 20 ? 'error' : d.docker.dockerd_pct >= 10 ? 'warning' : 'ok'}">${d.docker.dockerd_pct}%</div>`;
+  h += `<div class="card-sub">${d.docker.dockerd_etime}</div>`;
+  h += `</div>`;
+
+  h += `<div class="card">`;
+  h += `<div class="card-label">Running Containers</div>`;
+  h += `<div class="card-value">${d.docker.running}/${d.docker.total}</div>`;
+  h += `<div class="card-sub">${d.docker.total} total</div>`;
+  h += `</div>`;
+
+  h += `<div class="card">`;
+  h += `<div class="card-label">Docker Memory</div>`;
+  const dp = pct(d.docker.mem_used, d.docker.mem_total);
+  h += `<div class="card-value small">${dp}%</div>`;
+  h += `<div class="progress-bar"><div class="progress-fill ${fill(dp)}" style="width:${dp}%"></div></div>`;
+  h += `<div class="card-sub">${fmt(d.docker.mem_used)} / ${fmt(d.docker.mem_total)}</div>`;
+  h += `</div>`;
+
+  // ---- Disk ----
+  h += `<div class="section-title">Disk</div>`;
+  h += `<div class="disk-section">`;
+  h += `<div class="disk-grid">`;
+  for (const dk of d.disks) {
+    const up = pct(dk.used, dk.total);
+    h += `<div class="disk-item">`;
+    h += `<div class="disk-name">${dk.mount}</div>`;
+    h += `<div class="disk-bar"><div class="disk-fill ${fill(up)}" style="width:${up}%; background:${up >= 90 ? 'var(--error-color)' : up >= 70 ? 'var(--warning-color)' : 'var(--success-color)'}"></div></div>`;
+    h += `<div class="disk-used">${fmt(dk.used)} / ${fmt(dk.total)} (${up}%)</div>`;
+    h += `</div>`;
+  }
+  h += `</div></div>`;
+
+  // ---- Containers ----
+  h += `<div class="section-title">Containers</div>`;
+  h += `<div class="container-list">`;
+  for (const c of d.containers) {
+    const healthy = c.status === 'running' && c.health === 'healthy';
+    const starting = c.status === 'running' && c.health === 'starting';
+    const dotClass = healthy ? 'dot-healthy' : starting ? 'dot-starting' : c.status === 'running' ? 'dot-healthy' : 'dot-unhealthy';
+    h += `<div class="container-item">`;
+    h += `<div class="container-dot ${dotClass}"></div>`;
+    h += `<div class="container-name">${c.name}</div>`;
+    h += `<div class="container-cpu">${c.cpu_pct}</div>`;
+    h += `<div class="container-mem">${c.mem_pct}</div>`;
+    h += `</div>`;
+  }
+  h += `</div>`;
+
+  grid.innerHTML = h;
+}
+
+function fmtKB(kb) {
+  if (kb >= 1048576) return (kb / 1048576).toFixed(1) + ' TB';
+  if (kb >= 1024) return (kb / 1024).toFixed(1) + ' GB';
+  return kb + ' KB';
+}
+function fmt(v) { return fmtKB(v * 1024); }  // API returns bytes in KB units already
+
+fetchMetrics();
+setInterval(fetchMetrics, 5000);
+</script>
+</body>
+</html>

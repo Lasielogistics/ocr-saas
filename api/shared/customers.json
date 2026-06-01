@@ -1,0 +1,9 @@
+{
+  "cust_test_001": {
+    "customer_name": "Test Customer - Lasie Logistics",
+    "supabase_url": "https://bsaffwfvnnyaihmrmqwt.supabase.co",
+    "supabase_key": "***REDACTED***",
+    "api_key_hash": "76420da09236c350ad453fd3074cbd4df09b4f80ac31da782589638188e0beb3",
+    "email_imap": null
+  }
+}

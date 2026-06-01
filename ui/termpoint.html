@@ -86,6 +86,262 @@
     .info-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
     .info-tag { background: #e8f4fd; color: #2980b9; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
     .section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #aaa; margin: 1rem 0 0.5rem; }
+
+    /* ── Auto-Book Panel ─────────────────────────────── */
+    .ab-toggle {
+      position: fixed;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #888;
+      color: #fff;
+      padding: 0.8rem 0.5rem;
+      border-radius: 8px 0 0 8px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      font-weight: 700;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      z-index: 900;
+      box-shadow: -2px 0 8px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.3s;
+      min-width: 28px;
+    }
+    .ab-toggle:hover { background: #666; }
+    .ab-toggle.searching { background: #f39c12; }
+    .ab-toggle.searching:hover { background: #d68910; }
+    .ab-toggle.booked { background: #27ae60; }
+    .ab-toggle.booked:hover { background: #1e8449; }
+    .ab-toggle .dots {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+    }
+    .ab-toggle .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fff;
+    }
+    .ab-toggle.searching .dot { animation: pulse 1s infinite; }
+    .ab-toggle.searching .dot:nth-child(2) { animation-delay: 0.2s; }
+    .ab-toggle.searching .dot:nth-child(3) { animation-delay: 0.4s; }
+    .ab-toggle.searching .dot:nth-child(4) { animation-delay: 0.6s; }
+    .ab-toggle.searching .dot:nth-child(5) { animation-delay: 0.8s; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .ab-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      width: 320px;
+      height: 100vh;
+      background: #fff;
+      box-shadow: -4px 0 16px rgba(0,0,0,0.15);
+      z-index: 950;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.25s ease;
+    }
+    .ab-panel.open { transform: translateX(0); }
+
+    .ab-header {
+      background: #2c3e50;
+      color: #fff;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ab-header h3 { font-size: 0.95rem; }
+    .ab-header-actions { display: flex; gap: 0.5rem; }
+
+    .ab-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .ab-section { margin-bottom: 1.25rem; }
+    .ab-section label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 0.3rem;
+      letter-spacing: 0.05em;
+    }
+    .ab-section input, .ab-section select {
+      width: 100%;
+      padding: 0.55rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .ab-section input:focus, .ab-section select:focus { outline: none; border-color: #3498db; }
+
+    .ab-mode-tabs {
+      display: flex;
+      border-bottom: 2px solid #e0e0e0;
+      margin-bottom: 1rem;
+    }
+    .ab-mode-tab {
+      flex: 1;
+      padding: 0.6rem;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #888;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+    }
+    .ab-mode-tab.active { color: #3498db; border-bottom-color: #3498db; }
+    .ab-mode-tab:hover { color: #3498db; }
+
+    /* ── Pending Searches ────────────────────────────── */
+    .ab-pending {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+    .ab-pending-empty {
+      padding: 1.5rem 1rem;
+      text-align: center;
+      color: #aaa;
+      font-size: 0.8rem;
+    }
+    .ab-search-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+    }
+    .ab-search-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 0.75rem;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 0.8rem;
+    }
+    .ab-search-card-header .cont {
+      font-weight: 700;
+      color: #2c3e50;
+      text-transform: uppercase;
+    }
+    .ab-search-card-header .badge-sc {
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    .badge-sc.searching { background: #3498db; color: #fff; }
+    .badge-sc.retrying { background: #f39c12; color: #fff; }
+    .badge-sc.booked { background: #27ae60; color: #fff; }
+    .badge-sc.failed { background: #e74c3c; color: #fff; }
+    .badge-sc.stopped { background: #888; color: #fff; }
+
+    .ab-search-card-body {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      color: #555;
+    }
+    .ab-search-card-body .row { display: flex; gap: 0.5rem; margin-bottom: 0.2rem; }
+    .ab-search-card-body .lbl { color: #aaa; min-width: 50px; }
+    .ab-search-card-body .val { font-weight: 600; }
+    .ab-search-card-body .sub {
+      font-size: 0.7rem;
+      color: #888;
+      margin-top: 0.25rem;
+    }
+
+    .ab-search-card-actions {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      background: #f8f9fa;
+      border-top: 1px solid #e0e0e0;
+    }
+    .ab-search-card-actions button {
+      flex: 1;
+      padding: 0.3rem;
+      border: none;
+      border-radius: 3px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-sc-stop { background: #e74c3c; color: #fff; }
+    .btn-sc-remove { background: #aaa; color: #fff; }
+
+    .ab-check-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      color: #555;
+    }
+    .ab-check-row input[type="checkbox"] { width: auto; }
+
+    .ab-time-row { display: flex; gap: 0.5rem; }
+    .ab-time-row .ab-section { flex: 1; margin: 0; }
+
+    .ab-btn {
+      width: 100%;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .ab-btn-start { background: #27ae60; color: #fff; }
+    .ab-btn-start:hover { background: #1e8449; }
+    .ab-btn-start:disabled { background: #aaa; cursor: not-allowed; }
+    .ab-btn-stop { background: #e74c3c; color: #fff; }
+    .ab-btn-stop:hover { background: #c0392b; }
+
+    .ab-log {
+      flex: 1;
+      background: #1b1e2f;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-top: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      max-height: 300px;
+      overflow-y: auto;
+      color: #ccc;
+    }
+    .ab-log-entry { margin-bottom: 0.3rem; line-height: 1.4; }
+    .ab-log-entry.success { color: #27ae60; }
+    .ab-log-entry.error { color: #e74c3c; }
+    .ab-log-entry.retry { color: #f39c12; }
+    .ab-log-entry.info { color: #888; }
+    .ab-log-entry.running { color: #3498db; }
+    .ab-p-tab {
+      flex: 1;
+      padding: 0.5rem;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #888;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .ab-p-tab.active { color: #3498db; border-bottom-color: #3498db; }
+    .ab-p-tab:hover { color: #3498db; }
   </style>
 </head>
 <body>
@@ -95,6 +351,144 @@
   <div style="display:flex; align-items:center; gap:1rem;">
     <span class="badge" id="authBadge" style="background:#e74c3c">DISCONNECTED</span>
     <button class="btn btn-primary" id="connectBtn" onclick="connect()">Connect</button>
+  </div>
+</div>
+
+<!-- Auto-Book Toggle Button -->
+<div class="ab-toggle" id="abToggle" onclick="toggleAutoBookPanel()">
+  <div class="dots" id="abToggleDots">
+    <div class="dot"></div>
+  </div>
+  AUTO BOOK
+</div>
+
+<!-- Auto-Book Panel -->
+<div class="ab-panel" id="abPanel">
+  <div class="ab-header">
+    <h3>Auto Book Appointment</h3>
+    <div class="ab-header-actions">
+      <button class="btn" style="padding:0.3rem 0.6rem;font-size:0.75rem;background:#34495e;color:#fff;border:none;border-radius:4px;cursor:pointer" onclick="toggleAutoBookPanel()">✕</button>
+    </div>
+  </div>
+  <div class="ab-body">
+    <!-- Panel tabs -->
+    <div class="ab-panel-tabs" style="display:flex; border-bottom:2px solid #e0e0e0; margin-bottom:0.75rem;">
+      <div class="ab-p-tab active" id="abTabCfg" onclick="showAbPane('cfg')">Configure</div>
+      <div class="ab-p-tab" id="abTabSearches" onclick="showAbPane('searches')">Pending Searches <span id="abPendingCount" style="background:#3498db;color:#fff;padding:0.1rem 0.4rem;border-radius:8px;font-size:0.65rem;margin-left:4px;display:none">0</span></div>
+    </div>
+
+    <!-- Configure pane -->
+    <div id="abCfgPane">
+      <div class="ab-section">
+        <label>Container #</label>
+        <input type="text" id="abContainer" placeholder="FSCU6954495" style="text-transform:uppercase">
+      </div>
+      <div class="ab-section">
+        <label>Move Type</label>
+        <select id="abMoveType">
+          <option value="IP">Import Pickup</option>
+          <option value="ID">Import Drop Off</option>
+          <option value="XP">Export Pickup</option>
+          <option value="XD">Export Drop Off</option>
+          <option value="MP">Empty Pickup</option>
+          <option value="MD">Empty Drop Off</option>
+        </select>
+      </div>
+      <div class="ab-mode-tabs">
+        <div class="ab-mode-tab active" id="abTabFirst" onclick="setAbMode('first')">First Available</div>
+        <div class="ab-mode-tab" id="abTabSlot" onclick="setAbMode('slot')">Specific Slot</div>
+        <div class="ab-mode-tab" id="abTabRange" onclick="setAbMode('range')">Time Range</div>
+      </div>
+
+      <!-- First Available Fields -->
+      <div id="abFirstFields">
+        <div class="ab-section">
+          <label>Start Scanning From</label>
+          <input type="date" id="abFirstFromDate">
+        </div>
+        <div class="ab-check-row">
+          <input type="checkbox" id="abFirstToday" checked onchange="toggleFirstToday()">
+          <label for="abFirstToday" style="margin:0;text-transform:none;font-weight:400">Start from today</label>
+        </div>
+        <div class="ab-check-row">
+          <input type="checkbox" id="abFirstExact" checked>
+          <label for="abFirstExact" style="margin:0;text-transform:none;font-weight:400">Take soonest slot available (7-day scan)</label>
+        </div>
+      </div>
+
+      <!-- Specific Slot Fields -->
+      <div id="abSlotFields" style="display:none">
+        <div class="ab-section">
+          <label>Target Date</label>
+          <input type="date" id="abTargetDate">
+        </div>
+        <div class="ab-section">
+          <label>Target Time</label>
+          <input type="time" id="abTargetTime" value="08:00">
+        </div>
+        <div class="ab-check-row">
+          <input type="checkbox" id="abAcceptEarlier" checked>
+          <label for="abAcceptEarlier" style="margin:0;text-transform:none;font-weight:400">Accept earlier slot if exact not available</label>
+        </div>
+      </div>
+      <!-- Time Range Fields -->
+      <div id="abRangeFields" style="display:none">
+        <div class="ab-time-row">
+          <div class="ab-section">
+            <label>From Date</label>
+            <input type="date" id="abFromDate">
+          </div>
+          <div class="ab-section">
+            <label>From Time</label>
+            <input type="time" id="abFromTime" value="08:00">
+          </div>
+        </div>
+        <div class="ab-time-row" style="margin-top:0.75rem">
+          <div class="ab-section">
+            <label>To Date</label>
+            <input type="date" id="abToDate">
+          </div>
+          <div class="ab-section">
+            <label>To Time</label>
+            <input type="time" id="abToTime" value="17:00">
+          </div>
+        </div>
+        <div class="ab-check-row" style="margin-top:0.5rem">
+          <input type="checkbox" id="abCheckEarlier">
+          <label for="abCheckEarlier" style="margin:0;text-transform:none;font-weight:400">Also check earlier days before "From"</label>
+        </div>
+      </div>
+
+      <!-- Retry settings -->
+      <div class="ab-section" style="margin-top:0.75rem">
+        <label>Retry Interval</label>
+        <select id="abRetryInterval">
+          <option value="30">30 seconds</option>
+          <option value="60" selected>1 minute</option>
+          <option value="120">2 minutes</option>
+          <option value="300">5 minutes</option>
+        </select>
+      </div>
+      <div class="ab-check-row">
+        <input type="checkbox" id="abExpBackoff">
+        <label for="abExpBackoff" style="margin:0;text-transform:none;font-weight:400">Exponential backoff (2x after each retry, max 10min)</label>
+      </div>
+
+      <div class="ab-section" style="margin-top:1rem">
+        <button class="ab-btn ab-btn-start" id="abStartBtn" onclick="startAutoBook()">+ Add Search</button>
+      </div>
+
+      <div class="ab-log" id="abLog">
+        <div class="ab-log-entry info">[waiting / Ready]</div>
+      </div>
+    </div>
+
+    <!-- Pending searches pane -->
+    <div id="abSearchesPane" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+      <div id="abPendingList" class="ab-pending">
+        <div class="ab-pending-empty">No active searches.<br>Add one from Configure.</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -184,7 +578,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = window.location.origin;
+const API = 'http://192.168.50.100:8040';
 
 const STATUS_LABELS = { C: 'Confirmed', W: 'Tentative', P: 'Pending', R: 'Rejected', D: 'Dispatched', X: 'Cancelled' };
 const TYPE_LABELS = { IP: 'Import Pickup', ID: 'Import Drop Off', XP: 'Export Pickup', XD: 'Export Drop Off', MP: 'Empty Pickup', MD: 'Empty Drop Off' };
@@ -214,6 +608,16 @@ function fmtDate(d) {
 const today = new Date();
 document.getElementById('apptFrom').value = fmtDate(today);
 document.getElementById('apptTo').value = fmtDate(new Date(today.getTime() + 7 * 86400000));
+
+// Auto-book default dates
+const tomorrow = new Date(today);
+tomorrow.setDate(today.getDate() + 1);
+document.getElementById('abTargetDate').value = fmtDate(tomorrow);
+
+const in3days = new Date(today);
+in3days.setDate(today.getDate() + 3);
+document.getElementById('abFromDate').value = fmtDate(tomorrow);
+document.getElementById('abToDate').value = fmtDate(in3days);
 
 // ─── Toast ──────────────────────────────────────────────────────────────────────
 
@@ -730,9 +1134,493 @@ function showTab(tab) {
   document.getElementById('containerCard').style.display = tab === 'create' ? 'block' : 'none';
 }
 
+// ─── Auto-Book Panel — Multi-Search Engine ────────────────────────────────
+
+let searches = [];
+let searchCounter = 0;
+
+function showAbPane(pane) {
+  document.getElementById('abCfgPane').style.display = pane === 'cfg' ? 'block' : 'none';
+  document.getElementById('abSearchesPane').style.display = pane === 'searches' ? 'flex' : 'none';
+  document.getElementById('abTabCfg').classList.toggle('active', pane === 'cfg');
+  document.getElementById('abTabSearches').classList.toggle('active', pane === 'searches');
+}
+
+function setAbMode(mode) {
+  document.getElementById('abTabFirst').classList.toggle('active', mode === 'first');
+  document.getElementById('abTabSlot').classList.toggle('active', mode === 'slot');
+  document.getElementById('abTabRange').classList.toggle('active', mode === 'range');
+  document.getElementById('abFirstFields').style.display = mode === 'first' ? 'block' : 'none';
+  document.getElementById('abSlotFields').style.display = mode === 'slot' ? 'block' : 'none';
+  document.getElementById('abRangeFields').style.display = mode === 'range' ? 'block' : 'none';
+}
+
+function toggleFirstToday() {
+  const checked = document.getElementById('abFirstToday').checked;
+  document.getElementById('abFirstFromDate').disabled = checked;
+  if (checked) {
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    document.getElementById('abFirstFromDate').value = fmtDate(t);
+  }
+}
+
+function abLog(msg, type = 'info') {
+  const log = document.getElementById('abLog');
+  const entry = document.createElement('div');
+  entry.className = 'ab-log-entry ' + type;
+  const now = new Date();
+  const ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(n => String(n).padStart(2, '0')).join(':');
+  entry.textContent = '[' + ts + '] ' + msg;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+function getRetryDelay(attempt, baseInterval, useExpBackoff) {
+  if (!useExpBackoff) return baseInterval * 1000;
+  const maxDelay = 600;
+  const delay = Math.min(baseInterval * Math.pow(2, attempt - 1), maxDelay);
+  return delay * 1000;
+}
+
+async function startAutoBook() {
+  const container = document.getElementById('abContainer').value.trim().toUpperCase();
+  if (!container) { showToast('Container number is required', 'error'); return; }
+  const type = document.getElementById('abMoveType').value;
+  const mode = document.querySelector('.ab-mode-tab.active')?.id === 'abTabFirst' ? 'first'
+    : document.querySelector('.ab-mode-tab.active')?.id === 'abTabSlot' ? 'slot' : 'range';
+  const retryBase = parseInt(document.getElementById('abRetryInterval').value) || 60;
+  const useExpBackoff = document.getElementById('abExpBackoff').checked;
+
+  const search = {
+    id: ++searchCounter,
+    container, type, mode,
+    retryBase, useExpBackoff,
+    attemptCount: 0,
+    intervalId: null,
+    status: 'searching',
+    logs: [],
+    // Mode-specific config
+    config: {},
+  };
+
+  if (mode === 'first') {
+    const useToday = document.getElementById('abFirstToday').checked;
+    const fromDate = useToday ? fmtDate(new Date()) : document.getElementById('abFirstFromDate').value;
+    const matchExact = document.getElementById('abFirstExact').checked;
+    search.config = { fromDate, matchExact };
+    abLog('Queued: ' + container + ' (' + type + ') First Available from ' + fromDate + ' (7-day scan)', 'info');
+  } else if (mode === 'slot') {
+    const targetDate = document.getElementById('abTargetDate').value;
+    const targetTime = document.getElementById('abTargetTime').value;
+    const acceptEarlier = document.getElementById('abAcceptEarlier').checked;
+    search.config = { targetDate, targetTime, acceptEarlier };
+    abLog('Queued: ' + container + ' (' + type + ') Slot ' + targetDate + ' ' + targetTime + (acceptEarlier ? ' [accept earlier]' : ''), 'info');
+  } else {
+    const fromDate = document.getElementById('abFromDate').value;
+    const fromTime = document.getElementById('abFromTime').value;
+    const toDate = document.getElementById('abToDate').value;
+    const toTime = document.getElementById('abToTime').value;
+    const checkEarlier = document.getElementById('abCheckEarlier').checked;
+    search.config = { fromDate, fromTime, toDate, toTime, checkEarlier };
+    abLog('Queued: ' + container + ' (' + type + ') Range ' + fromDate + ' ' + fromTime + ' → ' + toDate + ' ' + toTime, 'info');
+  }
+
+  searches.push(search);
+  renderPendingSearches();
+  updatePendingCount();
+
+  // Start the first cycle immediately
+  runSearchCycle(search);
+}
+
+async function runSearchCycle(search) {
+  if (search.status !== 'searching') return;
+
+  search.attemptCount++;
+  const attempt = search.attemptCount;
+  let slot = null;
+
+  addSearchLog(search, '[' + attempt + '] Checking slots...', 'running');
+
+  if (search.mode === 'first') {
+    slot = await findSlot_FirstAvailable(search, attempt);
+  } else if (search.mode === 'slot') {
+    slot = await findSlot_Specific(search, attempt);
+  } else {
+    slot = await findSlot_Range(search, attempt);
+  }
+
+  if (search.status !== 'searching') return;
+
+  if (slot) {
+    addSearchLog(search, 'Found slot: ' + slot.date + ' ' + slot.time + ' — booking...', 'info');
+    const booked = await bookSlotForSearch(search, slot);
+    if (booked) {
+      search.status = 'booked';
+      addSearchLog(search, 'APPT CREATED: ' + booked, 'success');
+      showToast('Appt #' + booked + ' created for ' + search.container);
+      loadAppointments();
+      renderPendingSearches();
+      updatePendingCount();
+      updateAbToggle();
+      return;
+    }
+  }
+
+  if (search.status !== 'searching') return;
+
+  const delay = getRetryDelay(search.attemptCount, search.retryBase, search.useExpBackoff);
+  const delaySec = (delay / 1000).toFixed(0);
+  addSearchLog(search, 'No slot this cycle. Retry in ' + delaySec + 's (attempt ' + attempt + ')', 'retry');
+  search.intervalId = setTimeout(() => runSearchCycle(search), delay);
+}
+
+async function findSlot_FirstAvailable(search, attempt) {
+  const { fromDate, matchExact } = search.config;
+  addSearchLog(search, 'Scanning from ' + fromDate + '...', 'info');
+
+  const today = new Date();
+  const startDate = new Date(fromDate + 'T00:00:00');
+  const totalDays = 7; // scan max 7 days ahead
+
+  try {
+    const dateSlots = [];
+    for (let i = 0; i <= totalDays; i++) {
+      if (search.status !== 'searching') return null;
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      try {
+        const res = await fetch(API + '/slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: dateStr, type: search.type, container: search.container }),
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        const avail = (data.slots || []).filter(s => s.available > 0);
+        if (avail.length > 0) {
+          avail.forEach(s => dateSlots.push({ date: dateStr, time: s.time, sortKey: i * 10000 + timeToMin(s.time) }));
+        }
+      } catch (e) { /* skip */ }
+    }
+
+    if (dateSlots.length === 0) {
+      addSearchLog(search, 'No slots found in 30 days', 'info');
+      return null;
+    }
+
+    dateSlots.sort((a, b) => a.sortKey - b.sortKey);
+    const pick = dateSlots[0];
+    addSearchLog(search, 'Best slot: ' + pick.date + ' ' + pick.time, 'info');
+    return { date: pick.date, time: pick.time };
+
+  } catch (e) {
+    addSearchLog(search, 'Error: ' + e.message, 'error');
+    return null;
+  }
+}
+
+async function findSlot_Specific(search, attempt) {
+  const { targetDate, targetTime, acceptEarlier } = search.config;
+  const targetMin = timeToMin(targetTime);
+
+  try {
+    const res = await fetch(API + '/slots', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: targetDate, type: search.type, container: search.container }),
+    });
+    if (res.status === 401 || res.status === 403) {
+      addSearchLog(search, 'Auth expired — reconnecting...', 'error');
+      await connect();
+      return null;
+    }
+    const data = await res.json();
+    if (data.error) { addSearchLog(search, 'API error: ' + data.error, 'error'); return null; }
+
+    const slots = data.slots || [];
+    const exactSlot = slots.find(s => s.time === targetTime && s.available > 0);
+
+    if (exactSlot) {
+      addSearchLog(search, 'Exact slot ' + targetTime + ' available!', 'info');
+      return { date: targetDate, time: targetTime };
+    }
+
+    if (!acceptEarlier) {
+      addSearchLog(search, 'Target slot ' + targetTime + ' unavailable, not accepting earlier', 'info');
+      return null;
+    }
+
+    const earlier = slots
+      .filter(s => timeToMin(s.time) < targetMin && s.available > 0)
+      .sort((a, b) => timeToMin(b.time) - timeToMin(a.time));
+
+    if (earlier.length > 0) {
+      addSearchLog(search, 'Accepting earlier: ' + earlier[0].time, 'info');
+      return { date: targetDate, time: earlier[0].time };
+    }
+
+    addSearchLog(search, 'No earlier slots today, scanning previous days...', 'info');
+    const base = new Date(targetDate + 'T00:00:00');
+
+    for (let d = 1; d <= 7; d++) {
+      if (search.status !== 'searching') return null;
+      const prevDate = new Date(base);
+      prevDate.setDate(base.getDate() - d);
+      const dateStr = prevDate.toISOString().split('T')[0];
+      addSearchLog(search, '  Checking ' + dateStr + '...', 'info');
+      try {
+        const r = await fetch(API + '/slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: dateStr, type: search.type, container: search.container }),
+        });
+        const d2 = await r.json();
+        const avail = (d2.slots || []).filter(s => s.available > 0);
+        if (avail.length > 0) {
+          const best = avail.sort((a, b) => timeToMin(b.time) - timeToMin(a.time))[0];
+          addSearchLog(search, 'Found earlier slot: ' + dateStr + ' ' + best.time, 'info');
+          return { date: dateStr, time: best.time };
+        }
+      } catch (e) { }
+    }
+
+    addSearchLog(search, 'No earlier slots in 7 days', 'info');
+    return null;
+
+  } catch (e) {
+    addSearchLog(search, 'Error: ' + e.message, 'error');
+    return null;
+  }
+}
+
+async function findSlot_Range(search, attempt) {
+  const { fromDate, fromTime, toDate, toTime, checkEarlier } = search.config;
+  const fromMin = timeToMin(fromTime);
+  const toMin = timeToMin(toTime);
+
+  const dates = [];
+  const cur = new Date(fromDate + 'T00:00:00');
+  const end = new Date(toDate + 'T00:00:00');
+  while (cur <= end) {
+    dates.push(cur.toISOString().split('T')[0]);
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  try {
+    const results = await Promise.all(
+      dates.map(d =>
+        fetch(API + '/slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: d, type: search.type, container: search.container }),
+        }).then(r => r.json()).catch(() => ({ slots: [] }))
+      )
+    );
+
+    const targetSlots = [];
+    results.forEach((data, i) => {
+      const date = dates[i];
+      (data.slots || []).forEach(s => {
+        if (s.available > 0) {
+          const sMin = timeToMin(s.time);
+          if (date === fromDate && sMin < fromMin) return;
+          if (date === toDate && sMin > toMin) return;
+          targetSlots.push({ date, time: s.time, sortKey: i * 10000 + sMin });
+        }
+      });
+    });
+
+    if (targetSlots.length > 0) {
+      targetSlots.sort((a, b) => a.sortKey - b.sortKey);
+      const pick = targetSlots[0];
+      addSearchLog(search, 'Best slot: ' + pick.date + ' ' + pick.time, 'info');
+      return { date: pick.date, time: pick.time };
+    }
+
+    addSearchLog(search, 'No slots in window', 'info');
+
+    if (checkEarlier) {
+      addSearchLog(search, 'Checking earlier days...', 'info');
+      const baseFrom = new Date(fromDate + 'T00:00:00');
+      for (let d = 1; d <= 3; d++) {
+        if (search.status !== 'searching') return null;
+        const prevDate = new Date(baseFrom);
+        prevDate.setDate(baseFrom.getDate() - d);
+        const dateStr = prevDate.toISOString().split('T')[0];
+        try {
+          const r = await fetch(API + '/slots', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: dateStr, type: search.type, container: search.container }),
+          });
+          const d2 = await r.json();
+          const avail = (d2.slots || []).filter(s => s.available > 0);
+          if (avail.length > 0) {
+            const best = avail.sort((a, b) => timeToMin(b.time) - timeToMin(a.time))[0];
+            addSearchLog(search, 'Found earlier slot: ' + dateStr + ' ' + best.time, 'info');
+            return { date: dateStr, time: best.time };
+          }
+        } catch (e) { }
+      }
+    }
+
+    return null;
+
+  } catch (e) {
+    addSearchLog(search, 'Error: ' + e.message, 'error');
+    return null;
+  }
+}
+
+async function bookSlotForSearch(search, slot) {
+  addSearchLog(search, 'Booking ' + slot.date + ' ' + slot.time + '...', 'info');
+  try {
+    const res = await fetch(API + '/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: slot.date, time: slot.time, type: search.type, container: search.container }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      addSearchLog(search, 'Booking failed: ' + data.error, 'error');
+      return null;
+    }
+    return data.appointmentId || 'OK';
+  } catch (e) {
+    addSearchLog(search, 'Booking error: ' + e.message, 'error');
+    return null;
+  }
+}
+
+function stopSearch(id) {
+  const s = searches.find(x => x.id === id);
+  if (!s) return;
+  if (s.intervalId) clearTimeout(s.intervalId);
+  s.status = 'stopped';
+  addSearchLog(s, 'Stopped by user', 'retry');
+  renderPendingSearches();
+  updatePendingCount();
+  updateAbToggle();
+}
+
+function removeSearch(id) {
+  const idx = searches.findIndex(x => x.id === id);
+  if (idx !== -1) {
+    if (searches[idx].intervalId) clearTimeout(searches[idx].intervalId);
+    searches.splice(idx, 1);
+  }
+  renderPendingSearches();
+  updatePendingCount();
+  updateAbToggle();
+}
+
+function addSearchLog(search, msg, type) {
+  const now = new Date();
+  const ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(n => String(n).padStart(2, '0')).join(':');
+  search.logs.push({ ts, msg, type });
+  // Keep last 50 entries
+  if (search.logs.length > 50) search.logs.splice(0, search.logs.length - 50);
+}
+
+function renderPendingSearches() {
+  const list = document.getElementById('abPendingList');
+  const active = searches.filter(s => s.status === 'searching' || s.status === 'retrying');
+  const done = searches.filter(s => s.status !== 'searching' && s.status !== 'retrying');
+
+  if (searches.length === 0) {
+    list.innerHTML = '<div class="ab-pending-empty">No active searches.<br>Add one from Configure.</div>';
+    return;
+  }
+
+  const modeLabel = { first: 'First Available', slot: 'Specific Slot', range: 'Range' };
+
+  list.innerHTML = [...active, ...done].map(s => {
+    const badgeClass = s.status === 'searching' ? 'searching' : s.status === 'retrying' ? 'retrying' : s.status === 'booked' ? 'booked' : s.status === 'failed' ? 'failed' : 'stopped';
+    const statusText = s.status === 'searching' ? 'SEARCHING' : s.status === 'retrying' ? 'RETRYING' : s.status === 'booked' ? 'BOOKED ✓' : s.status === 'failed' ? 'FAILED ✗' : 'STOPPED';
+    const lastLog = s.logs[s.logs.length - 1];
+    const logPreview = lastLog ? '[' + lastLog.ts + '] ' + lastLog.msg : 'No logs yet';
+
+    let configDesc = '';
+    if (s.mode === 'first') configDesc = 'From: ' + s.config.fromDate + ' (7-day scan)';
+    else if (s.mode === 'slot') configDesc = s.config.targetDate + ' ' + s.config.targetTime + (s.config.acceptEarlier ? ' (accept earlier)' : '');
+    else configDesc = s.config.fromDate + ' → ' + s.config.toDate;
+
+    return `
+      <div class="ab-search-card">
+        <div class="ab-search-card-header">
+          <span class="cont">${s.container}</span>
+          <span class="badge-sc ${badgeClass}">${statusText}</span>
+        </div>
+        <div class="ab-search-card-body">
+          <div class="row"><span class="lbl">Type</span><span class="val">${s.type} / ${modeLabel[s.mode]}</span></div>
+          <div class="row"><span class="lbl">Params</span><span class="val" style="font-size:0.7rem">${configDesc}</span></div>
+          <div class="row"><span class="lbl">Cycle</span><span class="val">#${s.attemptCount}</span></div>
+          <div class="sub">${logPreview}</div>
+        </div>
+        <div class="ab-search-card-actions">
+          ${s.status === 'searching' || s.status === 'retrying' ? '<button class="btn-sc-stop" onclick="stopSearch(' + s.id + ')">Stop</button>' : ''}
+          <button class="btn-sc-remove" onclick="removeSearch(' + s.id + ')">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateAbToggle() {
+  const toggle = document.getElementById('abToggle');
+  const dotsEl = document.getElementById('abToggleDots');
+  const active = searches.filter(s => s.status === 'searching' || s.status === 'retrying');
+  const hasBooked = searches.some(s => s.status === 'booked');
+
+  // Determine state: booked only if no active searches
+  if (active.length === 0 && hasBooked) {
+    toggle.className = 'ab-toggle booked';
+    dotsEl.innerHTML = '<div class="dot"></div>';
+  } else if (active.length > 0) {
+    toggle.className = 'ab-toggle searching';
+    // One dot per active search (max 5)
+    const count = Math.min(active.length, 5);
+    dotsEl.innerHTML = Array.from({ length: count }, () => '<div class="dot"></div>').join('');
+  } else {
+    toggle.className = 'ab-toggle';
+    dotsEl.innerHTML = '<div class="dot"></div>';
+  }
+}
+
+function updatePendingCount() {
+  const count = searches.filter(s => s.status === 'searching' || s.status === 'retrying').length;
+  const badge = document.getElementById('abPendingCount');
+  if (badge) {
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'inline' : 'none';
+  }
+  updateAbToggle();
+}
+
+function timeToMin(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function toggleAutoBookPanel() {
+  document.getElementById('abPanel').classList.toggle('open');
+  renderPendingSearches();
+  updateAbToggle();
+}
+
 window.onload = () => {
   document.getElementById('containerCard').style.display = 'block';
   document.getElementById('apptsCard').style.display = 'block';
+  // Set default First Available date
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
+  document.getElementById('abFirstFromDate').value = fmtDate(t);
+  updateAbToggle();
   connect();
 };
 </script>
